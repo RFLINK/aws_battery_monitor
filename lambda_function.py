@@ -27,7 +27,10 @@ from botocore.exceptions import ClientError
 IOT_REGION   = 'ap-northeast-1'
 TABLE_NAME   = 'MessageBuffer'
 REQUIRED     = ("destination", "gateway_id", "device_id", "sequence_number", "timestamp")
-
+for field in REQUIRED:
+    if field not in event:
+        raise ValueError(f"Missing required field: {field}")
+      
 # --- クライアント初期化 ---
 iot_client = boto3.client('iot-data', region_name=IOT_REGION)
 dynamodb   = boto3.resource('dynamodb', region_name=IOT_REGION)
