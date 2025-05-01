@@ -2,35 +2,56 @@ import json
 import boto3
 from botocore.exceptions import ClientError
 
-# ƒNƒ‰ƒCƒAƒ“ƒg‰Šú‰»
+# ã‚¯ãƒ©ã‚¤ã‚¢ãƒ³ãƒˆåˆæœŸåŒ–
 iot_client = boto3.client('iot-data', region_name='ap-northeast-1')
 dynamodb = boto3.resource('dynamodb', region_name='ap-northeast-1')
-table = dynamodb.Table('MessageBuffer')  # ƒe[ƒuƒ‹–¼‚Í•K—v‚É‰‚¶‚Ä•ÏX
+table = dynamodb.Table('MessageBuffer')  # ãƒ†ãƒ¼ãƒ–ãƒ«åã¯å¿…è¦ã«å¿œã˜ã¦å¤‰æ›´
+
+/*
+{
+  "destination": "server",
+  "gateway_id": "gw-001",
+  "sequence_number": 12345,
+  "device_id": "device-abc",
+  "rssi": -62,
+  "timestamp": 1714128000,
+  "voltages": [
+    3.30, 3.28, 3.29, 3.30, 3.27, 3.31, 3.29, 3.30, 3.28, 3.30,
+    3.29, 3.30, 3.28, 3.31, 3.29, 3.30, 3.27, 3.30, 3.29, 3.30,
+    3.28, 3.31, 3.29, 3.30, 3.28, 3.30, 3.29, 3.31, 3.28, 3.30,
+    3.29, 3.30, 3.28, 3.31, 3.27, 3.30, 3.29, 3.30, 3.28, 3.31,
+    3.29, 3.30, 3.28, 3.30, 3.29, 3.31, 3.27, 3.30, 3.29, 3.30,
+    3.28, 3.31, 3.29, 3.30, 3.28, 3.30, 3.29, 3.31, 3.28, 3.30
+  ],
+  "temperature": 24.8,
+  "humidity": 58.2
+}
+*/
 
 def lambda_handler(event, context):
     print("Received event:", json.dumps(event))
 
     try:
-        # •K{ƒpƒ‰ƒ[ƒ^æ“¾
+        # å¿…é ˆãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿å–å¾—
         gateway_id = event['gateway_id']
         sequence_number = str(event['sequence_number'])
         device_id = event['device_id']
         rssi = event['rssi']
         timestamp = event['timestamp']
 
-        # Šg’£ƒpƒ‰ƒ[ƒ^iƒZƒ“ƒT[ƒf[ƒ^j
-        voltages = event.get('voltages', [])  # —áF60ŒÂ‚Ì“dˆ³’l
+        # æ‹¡å¼µãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ï¼ˆã‚»ãƒ³ã‚µãƒ¼ãƒ‡ãƒ¼ã‚¿ï¼‰
+        voltages = event.get('voltages', [])  # ä¾‹ï¼š60å€‹ã®é›»åœ§å€¤
         temperature = event.get('temperature')
         humidity = event.get('humidity')
 
         gw_seq_key = f"{gateway_id}_{sequence_number}"
 
-        # Šù‘¶ƒŒƒR[ƒhŠm”F
+        # æ—¢å­˜ãƒ¬ã‚³ãƒ¼ãƒ‰ç¢ºèª
         response = table.get_item(Key={'gw_seq_key': gw_seq_key})
         item = response.get('Item')
 
         if item is None:
-            # ‰‰ñ ¨ •Û‘¶ + ACK‘—M
+            # åˆå› â†’ ä¿å­˜ + ACKé€ä¿¡
             table.put_item(Item={
                 'gw_seq_key': gw_seq_key,
                 'device_id': device_id,
@@ -44,7 +65,7 @@ def lambda_handler(event, context):
             send_ack(device_id, gateway_id, timestamp)
             print(f"New entry stored and ACK sent: {gw_seq_key}")
         else:
-            # 2‰ñ–ÚˆÈ~ ¨ RSSI‚ª‹­‚¯‚ê‚Îã‘‚«
+            # 2å›ç›®ä»¥é™ â†’ RSSIãŒå¼·ã‘ã‚Œã°ä¸Šæ›¸ã
             if rssi > item.get('rssi', -999):
                 table.put_item(Item={
                     'gw_seq_key': gw_seq_key,
