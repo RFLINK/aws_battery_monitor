@@ -27,7 +27,7 @@ def lambda_handler(event, context):
 
     # パラメータ取得・Decimal 変換
     gateway_id      = event['gateway_id']
-    sequence_number = str(event['sequence_number'])
+    sequence_number = int(event.get("sequence_number"))
     device_id       = event['device_id']
     timestamp       = int(event['timestamp'])
     rssi            = int(event.get("rssi")) if event.get("rssi") is not None else None
@@ -39,26 +39,25 @@ def lambda_handler(event, context):
     humidity_decimal    = (Decimal(str(event["humidity"]))
                            if event.get("humidity") is not None else None)
 
-    gw_seq_key = f"{gateway_id}_{sequence_number}"
-
     # 初回書き込み + ACK
     try:
         table.put_item(
             Item={
-                'gw_seq_key'     : gw_seq_key,
-                'gateway_id'     : gateway_id,
+                # Primary key
                 'device_id'      : device_id,
                 'sequence_number': sequence_number,
+                # Other
+                'gateway_id'     : gateway_id,
                 'timestamp'      : timestamp,
                 'rssi'           : rssi,
                 'voltages'       : voltages_decimal,
                 'temperature'    : temperature_decimal,
                 'humidity'       : humidity_decimal
             },
-            ConditionExpression="attribute_not_exists(gw_seq_key)"
+            ConditionExpression="attribute_not_exists(device_id) AND attribute_not_exists(sequence_number)"
         )
         _send_ack(gateway_id, device_id, sequence_number, timestamp)
-        print(f"[Init] Stored & ACK sent for {gw_seq_key}")
+        print(f"[Init] Stored & ACK sent for {device_id} + {sequence_number}")
         return {"status": "first_stored"}
 
     except ClientError as e:
@@ -69,9 +68,13 @@ def lambda_handler(event, context):
     # RSSIが強ければ上書き
     try:
         table.update_item(
-            Key={'gw_seq_key': gw_seq_key},
+            Key={
+                'device_id'      : device_id,
+                'sequence_number': sequence_number
+            },
             UpdateExpression="""
-                SET rssi        = :rssi,
+                SET gateway_id  = :gateway_id,
+                    rssi        = :rssi,
                     voltages    = :voltages,
                     temperature = :temperature,
                     humidity    = :humidity,
@@ -79,6 +82,7 @@ def lambda_handler(event, context):
             """,
             ConditionExpression="rssi < :rssi",
             ExpressionAttributeValues={
+                ':gateway_id'  : gateway_id,
                 ':rssi'        : rssi,
                 ':voltages'    : voltages_decimal,
                 ':temperature' : temperature_decimal,
@@ -86,12 +90,12 @@ def lambda_handler(event, context):
                 ':timestamp'   : timestamp
             }
         )
-        print(f"[Update] Overwrote {gw_seq_key} with stronger RSSI {rssi}")
+        print(f"[Update] Overwrote {device_id}_{sequence_number} with stronger RSSI {rssi}")
         return {"status": "updated_rssi"}
 
     except ClientError as e:
         if e.response['Error']['Code'] == "ConditionalCheckFailedException":
-            print(f"[Skip] Existing RSSI is stronger or equal for {gw_seq_key}")
+            print(f"[Skip] Existing RSSI is stronger or equal for {device_id}_{sequence_number}")
             return {"status": "no_update_needed"}
         else:
             raise
