@@ -6,7 +6,7 @@ from boto3.dynamodb.conditions import Key
 
 # 環境変数にテーブル名とインデックス名を設定
 TABLE_NAME = os.environ.get('TABLE_NAME', 'MessageBuffer')
-INDEX_NAME = os.environ.get('INDEX_NAME', 'DeviceIndex')
+INDEX_NAME = os.environ.get('INDEX_NAME', 'TimestampIndex')
 
 # DynamoDB リソース初期化
 print(f"[INIT] TABLE_NAME={TABLE_NAME}, INDEX_NAME={INDEX_NAME}")
@@ -84,7 +84,7 @@ def lambda_handler(event, context):
 
 
 def _to_csv(items):
-    cols = ['gw_seq_key', 'gateway_id', 'device_id', 'sequence_number',
+    cols = ['gateway_id', 'device_id', 'sequence_number',
             'timestamp', 'rssi', 'temperature', 'humidity', 'voltages']
     lines = [','.join(cols)]
     for it in items:
