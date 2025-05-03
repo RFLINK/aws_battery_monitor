@@ -1,5 +1,6 @@
 import json
 import boto3
+import time
 from botocore.exceptions import ClientError
 from decimal import Decimal  # 追加
 
@@ -21,16 +22,22 @@ def lambda_handler(event, context):
         if field not in event:
             raise ValueError(f"Missing required field: {field}")
 
-    # server 宛以外は無視
-    if event["destination"] != "server":
-        return {"status": "ignored_destination"}
-
     # パラメータ取得・Decimal 変換
     gateway_id      = event['gateway_id']
     sequence_number = int(event.get("sequence_number"))
     device_id       = event['device_id']
     timestamp       = int(event['timestamp'])
     rssi            = int(event.get("rssi")) if event.get("rssi") is not None else None
+
+    # pingの場合はackだけ返す
+    if event["destination"] == "ping":
+        _send_ack(gateway_id, device_id, sequence_number)
+        print(f"[Ping] ACK sent for ping from {gateway_id}_{sequence_number}")
+        return {"status": "ping_ack_sent"}
+        
+    # server 宛以外は無視
+    if event["destination"] != "server":
+        return {"status": "ignored_destination"}
 
     # ここで float → Decimal へ変換
     voltages_decimal = [Decimal(str(v)) for v in event.get("voltages", [])]
@@ -56,7 +63,7 @@ def lambda_handler(event, context):
             },
             ConditionExpression="attribute_not_exists(device_id) AND attribute_not_exists(sequence_number)"
         )
-        _send_ack(gateway_id, device_id, sequence_number, timestamp)
+        _send_ack(gateway_id, device_id, sequence_number)
         print(f"[Init] Stored & ACK sent for {device_id} + {sequence_number}")
         return {"status": "first_stored"}
 
@@ -100,14 +107,15 @@ def lambda_handler(event, context):
         else:
             raise
 
-def _send_ack(gateway_id, device_id, sequence_number, timestamp):
+def _send_ack(gateway_id, device_id, sequence_number):
+    ack_timestamp = int(time.time())
     ack_topic = f"battery-monitor/{gateway_id}/down/ack"
     payload = {
         "destination"    : "gateway",
         "gateway_id"     : gateway_id,
         "device_id"      : device_id,
         "sequence_number": sequence_number,
-        "timestamp"      : timestamp,
+        "timestamp"      : ack_timestamp,
         "status"         : "ack"
     }
     try:
