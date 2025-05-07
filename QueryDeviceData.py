@@ -6,10 +6,9 @@ from boto3.dynamodb.conditions import Key
 
 # 環境変数にテーブル名とインデックス名を設定
 TABLE_NAME = os.environ.get('TABLE_NAME', 'MessageBuffer')
-INDEX_NAME = os.environ.get('INDEX_NAME', 'TimestampIndex')
 
 # DynamoDB リソース初期化
-print(f"[INIT] TABLE_NAME={TABLE_NAME}, INDEX_NAME={INDEX_NAME}")
+print(f"[INIT] TABLE_NAME={TABLE_NAME}")
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(TABLE_NAME)
 
@@ -41,10 +40,9 @@ def lambda_handler(event, context):
     print(f"[QUERY] device_id={device_id}, start={start}, end={end}")
     try:
         resp = table.query(
-            IndexName=INDEX_NAME,
             KeyConditionExpression=(
                 Key('device_id').eq(device_id) &
-                Key('timestamp').between(start, end)
+                Key('sequence_number').between(start, end)
             ),
             ScanIndexForward=True
         )
