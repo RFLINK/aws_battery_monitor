@@ -19,7 +19,17 @@
 - ダウンロード
   MQTTの battery-monitor/{gw-id}/down/# を Subscribe。ACKを受信したら、指定の device_id にLoRa送信。
 
-# GW->Serverへ送信
+# GW->Serverへping送信（時間獲得）
+```
+{
+  "destination": "ping",
+  "gateway_id": "gw-001",
+  "device_id": "device-abc",
+  "sequence_number": 12345,
+  "timestamp": 1714128000
+}
+```
+# GW->Serverへdata送信
 ```
 {
   "destination": "server",
