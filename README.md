@@ -20,6 +20,7 @@
   MQTTの battery-monitor/{gw-id}/down/# を Subscribe。ACKを受信したら、指定の device_id にLoRa送信。
 
 # GW->Serverへping送信（時間獲得）
+- データベース更新なし。応答ACKのTimestampを利用してGWのRTCをセットするように使う。GWおよびセンサーノードはUTC時間で動作する事。（つまりJST補正しない）
 ```
 {
   "destination": "ping",
@@ -30,6 +31,7 @@
 }
 ```
 # GW->Serverへdata送信
+- もし、RSSIが-100以上であるなら、+100を加算し、残りの時間だけ送信前にDelay(ms)する。-130ならdelaymsec(30)となる。（電波強度が高い信号をうけとったGWを優先する措置）
 ```
 {
   "destination": "server",
@@ -51,6 +53,7 @@
 }
 ```
 # ACK信号
+- ACKに含まれるtimestampは、Serverの現時刻。GWのRTC時間補正に使用する。UTC時刻であり、GWおよびセンサーノードもUTC時間で動作させること。
 ```
 {
   "destination": "gateway",
