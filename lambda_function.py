@@ -2,124 +2,132 @@ import json
 import boto3
 import time
 from botocore.exceptions import ClientError
-from decimal import Decimal  # 追加
+from decimal import Decimal
 
-# --- 環境変数 or 定数 ---
+# --- Environment Variables / Constants ---
 IOT_REGION = 'ap-northeast-1'
 TABLE_NAME = 'MessageBuffer'
-REQUIRED   = ("destination", "gateway_id", "device_id", "sequence_number", "timestamp")
+REQUIRED_KEYS = ("destination", "gateway_id", "device_id", "sequence_number", "timestamp")
 
-# --- クライアント初期化 ---
-iot_client = boto3.client('iot-data', region_name=IOT_REGION)
-dynamodb   = boto3.resource('dynamodb', region_name=IOT_REGION)
-table      = dynamodb.Table(TABLE_NAME)
+# --- AWS Clients Initialization ---
+iot = boto3.client('iot-data', region_name=IOT_REGION)
+ddb = boto3.resource('dynamodb', region_name=IOT_REGION)
+table = ddb.Table(TABLE_NAME)
+
 
 def lambda_handler(event, context):
     print("Received event:", event)
 
-    # 必須チェック
-    for field in REQUIRED:
-        if field not in event:
-            raise ValueError(f"Missing required field: {field}")
+    # 1) Required field check
+    for key in REQUIRED_KEYS:
+        if key not in event:
+            raise ValueError(f"Missing required field: {key}")
 
-    # パラメータ取得・Decimal 変換
+    # 2) Extract and convert parameters
     gateway_id      = event['gateway_id']
-    sequence_number = int(event.get("sequence_number"))
+    seq = int(event['sequence_number'])
     device_id       = event['device_id']
-    timestamp       = int(event['timestamp'])
-    rssi            = int(event.get("rssi")) if event.get("rssi") is not None else None
+    msg_ts          = int(event['timestamp'])
+    rssi            = int(event.get('rssi')) if 'rssi' in event else None
 
-    # pingの場合はackだけ返す
-    if event["destination"] == "ping":
-        _send_ack(gateway_id, device_id, sequence_number)
-        print(f"[Ping] ACK sent for ping from {gateway_id}_{sequence_number}")
-        return {"status": "ping_ack_sent"}
-        
-    # server 宛以外は無視
-    if event["destination"] != "server":
-        return {"status": "ignored_destination"}
+    # Numeric fields conversion
+    voltages = [Decimal(str(v)) for v in event.get('voltages', [])]
+    temperature = Decimal(str(event['temperature'])) if 'temperature' in event else None
+    humidity    = Decimal(str(event['humidity']))    if 'humidity' in event else None
 
-    # ここで float → Decimal へ変換
-    voltages_decimal = [Decimal(str(v)) for v in event.get("voltages", [])]
-    temperature_decimal = (Decimal(str(event["temperature"]))
-                           if event.get("temperature") is not None else None)
-    humidity_decimal    = (Decimal(str(event["humidity"]))
-                           if event.get("humidity") is not None else None)
+    now       = int(time.time())
+    threshold = now - 3
 
-    # 初回書き込み + ACK
+    # Handle ping: ACK only
+    if event['destination'] == 'ping':
+        _send_ack(gateway_id, device_id, seq)
+        print(f"[Ping] ACK sent for ping {device_id}_{seq}")
+        return {'status': 'ping_ack_sent'}
+
+    # Ignore non-server
+    if event['destination'] != 'server':
+        return {'status': 'ignored_destination'}
+
+    # 3) Initial write + ACK
     try:
         table.put_item(
             Item={
-                # Primary key
-                'device_id'      : device_id,
-                'sequence_number': sequence_number,
-                # Other
-                'gateway_id'     : gateway_id,
-                'timestamp'      : timestamp,
-                'rssi'           : rssi,
-                'voltages'       : voltages_decimal,
-                'temperature'    : temperature_decimal,
-                'humidity'       : humidity_decimal
+                'device_id'       : device_id,
+                'sequence_number' : seq,
+                'gateway_id'      : gateway_id,
+                'timestamp'       : msg_ts,
+                'rssi'            : rssi,
+                'voltages'        : voltages,
+                'temperature'     : temperature,
+                'humidity'        : humidity,
+                'db_update_time'  : now
             },
             ConditionExpression="attribute_not_exists(device_id) AND attribute_not_exists(sequence_number)"
         )
-        _send_ack(gateway_id, device_id, sequence_number)
-        print(f"[Init] Stored & ACK sent for {device_id} + {sequence_number}")
-        return {"status": "first_stored"}
+        _send_ack(gateway_id, device_id, seq)
+        print(f"[Init] Stored & ACK for {device_id}_{seq}")
+        return {'status': 'first_stored'}
 
-    except ClientError as e:
-        code = e.response['Error']['Code']
+    except ClientError as exc:
+        code = exc.response['Error']['Code']
         if code != 'ConditionalCheckFailedException':
-            raise  # 予期しないエラーは投げ直す
-
-    # RSSIが強ければ上書き
-    try:
-        table.update_item(
-            Key={
-                'device_id'      : device_id,
-                'sequence_number': sequence_number
-            },
-            UpdateExpression="""
-                SET gateway_id  = :gateway_id,
-                    rssi        = :rssi,
-                    voltages    = :voltages,
-                    temperature = :temperature,
-                    humidity    = :humidity,
-                    timestamp   = :timestamp
-            """,
-            ConditionExpression="rssi < :rssi",
-            ExpressionAttributeValues={
-                ':gateway_id'  : gateway_id,
-                ':rssi'        : rssi,
-                ':voltages'    : voltages_decimal,
-                ':temperature' : temperature_decimal,
-                ':humidity'    : humidity_decimal,
-                ':timestamp'   : timestamp
-            }
-        )
-        print(f"[Update] Overwrote {device_id}_{sequence_number} with stronger RSSI {rssi}")
-        return {"status": "updated_rssi"}
-
-    except ClientError as e:
-        if e.response['Error']['Code'] == "ConditionalCheckFailedException":
-            print(f"[Skip] Existing RSSI is stronger or equal for {device_id}_{sequence_number}")
-            return {"status": "no_update_needed"}
-        else:
+            print(f"[ERROR] put_item failed: {code}")
             raise
 
-def _send_ack(gateway_id, device_id, sequence_number):
-    ack_timestamp = int(time.time())
-    ack_topic = f"battery-monitor/{gateway_id}/down/ack"
+    # 4) Timeout-based update + ACK
+    try:
+        resp = table.update_item(
+            Key={'device_id': device_id, 'sequence_number': seq},
+            UpdateExpression="""
+                SET gateway_id      = :gateway_id,
+                    rssi            = :rssi,
+                    voltages        = :voltages,
+                    temperature     = :temperature,
+                    humidity        = :humidity,
+                    #ts             = :msg_ts,
+                    db_update_time  = :now
+            """,
+            ExpressionAttributeNames={'#ts': 'timestamp'},
+            ExpressionAttributeValues={
+                ':gateway_id': gateway_id,
+                ':rssi'      : rssi,
+                ':voltages'  : voltages,
+                ':temperature': temperature,
+                ':humidity'  : humidity,
+                ':msg_ts'    : msg_ts,
+                ':now'       : now,
+                ':threshold' : threshold
+            },
+            ConditionExpression="db_update_time < :threshold",
+            ReturnValues="ALL_NEW"
+        )
+        _send_ack(gateway_id, device_id, seq)
+        print(f"[Timeout Update] Overwrite {device_id}_{seq} after timeout")
+        print("[New Item]", resp.get('Attributes'))
+        return {'status': 'timeout_updated'}
+
+    except ClientError as exc:
+        code = exc.response['Error']['Code']
+        if code == 'ConditionalCheckFailedException':
+            print(f"[Skip] No update needed for {device_id}_{seq}")
+            return {'status': 'no_update_needed'}
+        print(f"[ERROR] update_item failed: {code}")
+        raise
+
+
+def _send_ack(gateway_id, device_id, seq):
+    ack_ts = int(time.time())
+    topic  = f"battery-monitor/{gateway_id}/down/ack"
     payload = {
-        "destination"    : "gateway",
-        "gateway_id"     : gateway_id,
-        "device_id"      : device_id,
-        "sequence_number": sequence_number,
-        "timestamp"      : ack_timestamp,
-        "status"         : "ack"
+        'destination'    : 'gateway',
+        'gateway_id'     : gateway_id,
+        'device_id'      : device_id,
+        'sequence_number': seq,
+        'timestamp'      : ack_ts,
+        'status'         : 'ack'
     }
     try:
-        iot_client.publish(topic=ack_topic, qos=1, payload=json.dumps(payload))
-        print(f"ACK published to {ack_topic}: {payload}")
-    except ClientError as e:
-        print(f"Error publishing ACK: {e.response['Error']['Message']}")
+        iot.publish(topic=topic, qos=0, payload=json.dumps(payload))
+        print(f"[ACK] Published: {payload}")
+    except ClientError as exc:
+        print(f"[ERROR] publish ACK failed: {exc.response['Error']['Message']}")
