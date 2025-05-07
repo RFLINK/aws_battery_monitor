@@ -1,3 +1,26 @@
+# センサーノード
+- RTCをポーリングして１秒間隔で呼ばれる関数を設ける。
+  ３秒毎に電圧を記録。
+  １８０秒事に気温湿度を記録。
+
+- 送信契機
+  送信許可タイマーが３秒以上であれば、毎秒 3%（random(100)<3）の抽選を行い、当選したらデータ送信を行う。
+  ACKが得られたら、すかさず次の送信を行う。
+  ACKが得られなかったら、送信許可タイマーのループに戻る。（つまり次の１秒で抽選当選して再送もあり得る）
+  他ノード宛のACKを受信したら、送信許可タイマーを０クリアする。
+
+- 送信内容
+  sequence_numberをデータ記録時のEPOC時間（UTC）/ 180 の値にセットしてＧＷへ送信してＡＣＫを待つ。
+  つまり、センサーデータ３分の先頭の時刻 / 180 をシーケンス番号として使う。（データベース上でユニークなキーとして使われる。上書きは可能）
+
+# LoRaゲートウェイ
+- アップロード
+  センサーノードのペイロードを以下のJSON形式に変換してMQTT battery-monitor/{gw-id}/up/data に Publish。
+- ダウンロード
+  MQTTの battery-monitor/{gw-id}/down/# を Subscribe。ACKを受信したら、指定の device_id にLoRa送信。
+
+# GW->Serverへ送信
+```
 {
   "destination": "server",
   "gateway_id": "gw-001",
@@ -16,3 +39,15 @@
   "temperature": 24.8,
   "humidity": 58.2
 }
+```
+# ACK信号
+```
+{
+  "destination": "gateway",
+  "gateway_id": "gw-001",
+  "device_id": "device-abc",
+  "sequence_number": 12347,
+  "timestamp": 1746587152,
+  "status": "ack"
+}
+```
