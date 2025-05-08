@@ -1,7 +1,8 @@
 // src/App.js
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import DeviceSelector from './components/DeviceSelector';
 import DateRangePicker from './components/DateRangePicker';
+import './App.css';
 import DataTable from './components/DataTable';
 import { API_BASE, QUERY_DATA_PATH } from './config';
 
@@ -11,6 +12,15 @@ function App() {
   const [end,   setEnd]     = useState(new Date());
   const [data,  setData]    = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // デバイスを選んだら自動で「今−1h～今」をセット
+  useEffect(() => {
+    if (!device) return;
+    const now = new Date();
+    setEnd(now);
+    setStart(new Date(now.getTime() - 3600 * 1000));
+    fetchData('json');
+  }, [device]);
 
   // デバッグ表示用
   const [debug, setDebug] = useState({

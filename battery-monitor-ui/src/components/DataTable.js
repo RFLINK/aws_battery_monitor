@@ -36,8 +36,8 @@ export default function DataTable({ items }) {
 
   // テーブルを包むコンテナ（横幅固定＆横スクロール対応）
   const containerStyle = {
-    width:       '1280px',
-    margin:      '0 auto',
+    width:       '1480px',
+    margin:      '0 ',
     overflowX:   'auto'
   };
 
@@ -47,43 +47,46 @@ export default function DataTable({ items }) {
     padding:     '4px',
     background:  '#f0f0f0',
     textAlign:   'center',
+    fontSize:    '0.9rem',
     whiteSpace:  'nowrap'
   };
   const tdLeft = {
     border:      '1px solid #ccc',
     padding:     '4px',
+    fontSize:    '0.9rem',
     whiteSpace:  'nowrap'
   };
   const tdRight = {
     border:      '1px solid #ccc',
     padding:     '4px',
     textAlign:   'center',
+    fontSize:    '0.9rem',
     whiteSpace:  'nowrap'
   };
 
   return (
     <div style={containerStyle}>
-      <table style={{ width: '1280px', borderCollapse: 'collapse' }}>
+      <table style={{ width: '1400px', borderCollapse: 'collapse' }}>
         <colgroup>
-          <col style={{ width: '120px' }} />  {/* Time */}
+          <col style={{ width: '160px' }} />  {/* Time */}
           <col style={{ width:  '80px' }} />  {/* rssi */}
-          <col style={{ width: '100px' }} />  {/* temperature */}
-          <col style={{ width: '100px' }} />  {/* humidity */}
+          <col style={{ width:  '80px' }} />  {/* temperature */}
+          <col style={{ width:  '80px' }} />  {/* humidity */}
           <col />                           {/* voltages: 残り幅 */}
         </colgroup>
         <thead>
           <tr>
             <th style={thStyle}>Time (JST)</th>
             <th style={thStyle}>rssi</th>
-            <th style={thStyle}>temperature</th>
-            <th style={thStyle}>humidity</th>
+            <th style={thStyle}>temp.</th>
+            <th style={thStyle}>humi.</th>
             <th style={thStyle}>voltages (20点／分)</th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row, idx) => (
             <tr key={idx}>
-              <td style={tdLeft}>{row.time}</td>
+              <td style={tdRight}>{row.time}</td>
               <td style={tdRight}>{row.rssi}</td>
               <td style={tdRight}>{row.temperature}</td>
               <td style={tdRight}>{row.humidity}</td>
@@ -93,7 +96,9 @@ export default function DataTable({ items }) {
                   gridTemplateColumns:'repeat(20, 1fr)',
                   gridAutoColumns:   'minmax(40px, 1fr)',
                   gap:               '2px',
-                  whiteSpace:        'nowrap'
+                  fontSize:          '0.9rem',
+                  whiteSpace:        'nowrap',
+                  paddingRight:      '16px'
                 }}>
                   {row.voltages.map((v, j) => (
                     <div key={j} style={{ textAlign:'right' }}>
