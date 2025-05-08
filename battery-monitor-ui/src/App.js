@@ -78,8 +78,8 @@ function App() {
       */}
       {debug.startSeq !== null && (
         <div style={{ marginBottom: 16, fontSize:12, color:'#666' }}>
-+         <div>Start Epoch: {debug.startEpoch} → Start Seq: {debug.startSeq}</div>
-+         <div>End   Epoch: {debug.endEpoch}   → End   Seq: {debug.endSeq}</div>
+         <div>Start Epoch: {debug.startEpoch} → Start Seq: {debug.startSeq}</div>
+         <div>End   Epoch: {debug.endEpoch}   → End   Seq: {debug.endSeq}</div>
         </div>
       )}
       

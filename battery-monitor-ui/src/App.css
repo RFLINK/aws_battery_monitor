@@ -36,3 +36,10 @@
     transform: rotate(360deg);
   }
 }
+
+.app-container {
+  width: 1280px;
+  margin: 0 auto;       /* ¶‰E’†‰›Šñ‚¹ */
+  padding: 20px 0;       /* ã‰º‚¾‚¯—]”’ */
+  box-sizing: border-box;
+}

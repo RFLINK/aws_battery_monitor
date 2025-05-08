@@ -2,58 +2,110 @@
 import React from 'react';
 
 export default function DataTable({ items }) {
-  if (!items.length) {
-    return <div>データがありません</div>;
-  }
 
-  // voltages のチャンクサイズ
-  const CHUNK_SIZE = 20;
+  // 1) items の各要素を、20 点ずつ分割→フラットな行配列に変換
+  const rows = items.flatMap(item => {
+    const { sequence_number, rssi, temperature, humidity, voltages } = item;
+    // sequence_number は「epoch秒 / 180」なので、逆算して epoch秒 を求める
+    const baseEpochSec = sequence_number * 180;
+    const chunks = [];
+    for (let i = 0; i < voltages.length; i += 20) {
+      const voltChunk = voltages.slice(i, i + 20);
 
-  // ヘッダを動的に作るため、最初のアイテムの voltages 長さから分数を計算
-  const numChunks = Math.ceil((items[0].voltages?.length || 0) / CHUNK_SIZE);
+      // 分割インデックスから「何分後か」を計算
+      const minuteOffset = i / 20; // 0,1,2,...
+      const dt = new Date((baseEpochSec + minuteOffset * 60) * 1000);
+      const timeStr = dt.toLocaleString('ja-JP', {
+        year:   'numeric',
+        month:  '2-digit',
+        day:    '2-digit',
+        hour:   '2-digit',
+        minute: '2-digit'
+      });
+
+      chunks.push({
+        time:        timeStr,
+        rssi,
+        temperature,
+        humidity,
+        voltages:    voltChunk,
+      });
+    }
+    return chunks;
+  });
+
+  // テーブルを包むコンテナ（横幅固定＆横スクロール対応）
+  const containerStyle = {
+    width:       '1280px',
+    margin:      '0 auto',
+    overflowX:   'auto'
+  };
+
+  // th / td の共通スタイル
+  const thStyle = {
+    border:      '1px solid #ccc',
+    padding:     '4px',
+    background:  '#f0f0f0',
+    textAlign:   'center',
+    whiteSpace:  'nowrap'
+  };
+  const tdLeft = {
+    border:      '1px solid #ccc',
+    padding:     '4px',
+    whiteSpace:  'nowrap'
+  };
+  const tdRight = {
+    border:      '1px solid #ccc',
+    padding:     '4px',
+    textAlign:   'center',
+    whiteSpace:  'nowrap'
+  };
 
   return (
-    <table style={{ borderCollapse: 'collapse', width: '100%', marginTop: 16 }} border="1" cellPadding="4">
-      <thead>
-        <tr>
-          <th>Time (JST)</th>
-          <th>rssi</th>
-          <th>temperature</th>
-          <th>humidity</th>
-          {Array.from({ length: numChunks }).map((_, idx) => (
-            <th key={idx}>{`${idx + 1} min 分電圧(20点)`}</th>
-          ))}
-        </tr>
-      </thead>
-      <tbody>
-        {items.map(item => {
-          // ① sequence_number→日時変換
-          const epochSecs = item.sequence_number * 180;
-          const timeStr   = new Date(epochSecs * 1000)
-                              .toLocaleString('ja-JP', { hour12: false });
-
-          // ② voltages を 20要素ずつの配列群に分割
-          const chunks = [];
-          for (let i = 0; i < (item.voltages||[]).length; i += CHUNK_SIZE) {
-            chunks.push(item.voltages.slice(i, i + CHUNK_SIZE));
-          }
-
-          return (
-            <tr key={item.sequence_number}>
-              <td>{timeStr}</td>
-              <td>{item.rssi}</td>
-              <td>{item.temperature}</td>
-              <td>{item.humidity}</td>
-              {/* ③ チャンクごとにセル出力 */}
-              {chunks.map((grp, i) => (
-                <td key={i}>
-                  {grp.map(v => v.toFixed(2)).join(', ')}
-                </td>
-              ))}
+    <div style={containerStyle}>
+      <table style={{ width: '1280px', borderCollapse: 'collapse' }}>
+        <colgroup>
+          <col style={{ width: '120px' }} />  {/* Time */}
+          <col style={{ width:  '80px' }} />  {/* rssi */}
+          <col style={{ width: '100px' }} />  {/* temperature */}
+          <col style={{ width: '100px' }} />  {/* humidity */}
+          <col />                           {/* voltages: 残り幅 */}
+        </colgroup>
+        <thead>
+          <tr>
+            <th style={thStyle}>Time (JST)</th>
+            <th style={thStyle}>rssi</th>
+            <th style={thStyle}>temperature</th>
+            <th style={thStyle}>humidity</th>
+            <th style={thStyle}>voltages (20点／分)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, idx) => (
+            <tr key={idx}>
+              <td style={tdLeft}>{row.time}</td>
+              <td style={tdRight}>{row.rssi}</td>
+              <td style={tdRight}>{row.temperature}</td>
+              <td style={tdRight}>{row.humidity}</td>
+              <td style={{ border:'1px solid #ccc', padding:'4px', overflowX:'auto' }}>
+                <div style={{
+                  display:           'grid',
+                  gridTemplateColumns:'repeat(20, 1fr)',
+                  gridAutoColumns:   'minmax(40px, 1fr)',
+                  gap:               '2px',
+                  whiteSpace:        'nowrap'
+                }}>
+                  {row.voltages.map((v, j) => (
+                    <div key={j} style={{ textAlign:'right' }}>
+                      {v.toFixed(2)}
+                    </div>
+                  ))}
+                </div>
+              </td>
             </tr>
-          );
-        })}
-      </tbody>
-    </table>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
