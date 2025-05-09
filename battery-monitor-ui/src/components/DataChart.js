@@ -21,11 +21,17 @@ export default function DataChart({ items }) {
     for (let i = 0; i < voltages.length; i += 20) {
       const chunk = voltages.slice(i, i + 20);
       const minuteOffset = i / 20;
-      const dt = new Date((baseEpochSec + minuteOffset * 60) * 1000);
-      const timeLabel = dt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+      const timestamp = (baseEpochSec + minuteOffset * 60) * 1000;
+      const dt = new Date(timestamp);
+      // X 軸にだけ表示する短いラベル
+      const timeLabel = dt.toLocaleTimeString('ja-JP', {
+        hour:   '2-digit',
+        minute: '2-digit'
+      });
       const avgVoltage = chunk.reduce((sum, v) => sum + v, 0) / chunk.length;
       dataPoints.push({
-        time: timeLabel,
+        timestamp,         // ← 生のミリ秒
+        timeLabel,         // ← XAxis 用の文字列ラベル
         temperature,
         avgVoltage
       });
@@ -38,9 +44,32 @@ export default function DataChart({ items }) {
       <ResponsiveContainer>
         <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="time" />
+		  <XAxis
+		    dataKey="timestamp"
+		    type="number"
+		    domain={['dataMin', 'dataMax']}
+		    tickFormatter={ms => {
+		      const d = new Date(ms);
+		      return d.toLocaleTimeString('ja-JP', {
+		        hour:   '2-digit',
+		        minute: '2-digit'
+		      });
+		    }}
+		  />
           <YAxis />
-          <Tooltip />
+          <Tooltip
+		    labelKey="timestamp"
+		    labelFormatter={ms => {
+		      const d = new Date(ms);
+		      return d.toLocaleString('ja-JP', {
+		        year:   'numeric',
+		        month:  '2-digit',
+		        day:    '2-digit',
+		        hour:   '2-digit',
+		        minute: '2-digit'
+		      });
+            }}
+          />
           <Legend verticalAlign="top" height={36} />
           <Line type="monotone" dataKey="temperature" stroke="#82ca9d" dot={false} />
           <Line type="monotone" dataKey="avgVoltage" stroke="#ffc658" dot={false} />
