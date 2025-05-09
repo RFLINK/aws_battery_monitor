@@ -4,6 +4,7 @@ import DeviceSelector from './components/DeviceSelector';
 import DateRangePicker from './components/DateRangePicker';
 import './App.css';
 import DataTable from './components/DataTable';
+import DataChart from './components/DataChart';
 import { API_BASE, QUERY_DATA_PATH } from './config';
 
 function App() {
@@ -94,8 +95,13 @@ function App() {
       )}
       
       { loading
-        ? <div>Loading…</div>
-        : <DataTable items={data} />
+        ?   <div>Loading…</div>
+        : (
+            <>
+              <DataChart items={data} />
+              <DataTable items={data} />
+            </>
+          )
       }
     </div>
   );
