@@ -6,10 +6,11 @@ import './App.css';
 import DataTable from './components/DataTable';
 import DataChart from './components/DataChart';
 import { API_BASE, QUERY_DATA_PATH } from './config';
+import batteryIcon from './icon_darkshape.png'
 
 function App() {
   const [device, setDevice] = useState('');
-  const [start, setStart]   = useState(new Date(Date.now() - 3600*1000));
+  const [start, setStart]   = useState(new Date(Date.now() - 3600*24*7*1000));
   const [end,   setEnd]     = useState(new Date());
   const [data,  setData]    = useState([]);
   const [loading, setLoading] = useState(false);
@@ -19,7 +20,7 @@ function App() {
     if (!device) return;
     const now = new Date();
     setEnd(now);
-    setStart(new Date(now.getTime() - 3600 * 1000));
+    setStart(new Date(now.getTime() - 3600 * 24 * 7 * 1000));
     fetchData('json');
   }, [device]);
 
@@ -67,8 +68,20 @@ function App() {
 
   return (
     <div style={{ padding: 20 }}>
-      <h1>Battery Monitor</h1>
-      <div style={{ marginBottom: 16 }}>
+      <h1 style={{ display: 'flex', alignItems: 'center', margin: 0 }}>
+        {/* アイコン画像 */}
+        <img
+          src={batteryIcon}
+          alt="Battery Icon"
+          style={{
+            width: 32,      // お好みのサイズに
+            height: 32,
+            marginRight: 8, // テキストとの隙間
+          }}
+        />
+        Battery Monitor
+      </h1>
+      <div style={{display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginTop: 20, marginBottom: 20, marginLeft: 20}}>
         <DeviceSelector value={device} onChange={setDevice} />
         <DateRangePicker
           start={start} end={end}
@@ -86,14 +99,14 @@ function App() {
       {/*
         ここがデバッグ用表示の挿入箇所です。
         fetchData() 後に startSeq / endSeq が表示されるようになります。
-      */}
       {debug.startSeq !== null && (
         <div style={{ marginBottom: 16, fontSize:12, color:'#666' }}>
          <div>Start Epoch: {debug.startEpoch} → Start Seq: {debug.startSeq}</div>
          <div>End   Epoch: {debug.endEpoch}   → End   Seq: {debug.endSeq}</div>
         </div>
       )}
-      
+      */}
+            
       { loading
         ?   <div>Loading…</div>
         : (

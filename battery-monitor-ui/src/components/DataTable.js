@@ -22,12 +22,16 @@ export default function DataTable({ items }) {
         hour:   '2-digit',
         minute: '2-digit'
       });
+      
+      // avgVoltage を計算
+      const sum = voltChunk.reduce((acc, v) => acc + v, 0);
+      const avgVoltage = sum / voltChunk.length;
 
       chunks.push({
         time:        timeStr,
-        rssi,
         temperature,
         humidity,
+        avgVoltage,
         voltages:    voltChunk,
       });
     }
@@ -68,18 +72,18 @@ export default function DataTable({ items }) {
     <div style={containerStyle}>
       <table style={{ width: '1400px', borderCollapse: 'collapse' }}>
         <colgroup>
-          <col style={{ width: '160px' }} />  {/* Time */}
-          <col style={{ width:  '80px' }} />  {/* rssi */}
-          <col style={{ width:  '80px' }} />  {/* temperature */}
-          <col style={{ width:  '80px' }} />  {/* humidity */}
-          <col />                           {/* voltages: 残り幅 */}
+          <col style={{ width: '150px' }} />{/* Time */}
+          <col style={{ width:  '70px' }} />{/* temperature */}
+          <col style={{ width:  '70px' }} />{/* humidity */}
+          <col style={{ width:  '70px' }} />{/* avgVoltage */}
+          <col />{/* voltages: 残り幅 */}
         </colgroup>
         <thead>
           <tr>
             <th style={thStyle}>Time (JST)</th>
-            <th style={thStyle}>rssi</th>
             <th style={thStyle}>temp.</th>
             <th style={thStyle}>humi.</th>
+            <th style={thStyle}>avgVol.</th>
             <th style={thStyle}>voltages (20点／分)</th>
           </tr>
         </thead>
@@ -87,9 +91,9 @@ export default function DataTable({ items }) {
           {rows.map((row, idx) => (
             <tr key={idx}>
               <td style={tdRight}>{row.time}</td>
-              <td style={tdRight}>{row.rssi}</td>
               <td style={tdRight}>{row.temperature}</td>
               <td style={tdRight}>{row.humidity}</td>
+              <td style={tdRight}>{row.avgVoltage.toFixed(2)}</td>
               <td style={{ border:'1px solid #ccc', padding:'4px', overflowX:'auto' }}>
                 <div style={{
                   display:           'grid',

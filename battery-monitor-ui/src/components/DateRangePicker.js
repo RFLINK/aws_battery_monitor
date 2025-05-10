@@ -21,7 +21,15 @@ export default function DateRangePicker({
   start, end, onStartChange, onEndChange
 }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 8,
+        marginTop: -2,   // ↑ 上に 8px 動かす
+        marginLeft: 0,  // ← 右へ 16px 動かす
+      }}
+    >
       <DatePicker
         selected={start}
         onChange={onStartChange}
@@ -30,7 +38,7 @@ export default function DateRangePicker({
         popperPlacement="bottom-start"
         popperProps={popperProps}
       />
-      <span style={{ margin: '0 8px' }}>{'~'}</span>
+      <span style={{ margin: '0 0px' }}>{'~'}</span>
       <DatePicker
         selected={end}
         onChange={onEndChange}

@@ -13,8 +13,22 @@ export default function DeviceSelector({ value, onChange }) {
   }, []);
 
   return (
-    <select value={value} onChange={e => onChange(e.target.value)}>
-      <option value="">-- デバイスを選択 --</option>
+    <select value={value} onChange={e => onChange(e.target.value)}
+    
+      style={{
+        // テキストを数ピクセル下にずらす
+        paddingTop: '2px',
+        paddingLeft: '8px',
+        paddingBottom: '2px',
+        // ボックスの高さを固定するなら
+        height: '26px',
+        // 必要なら行の高さも指定
+        lineHeight: '1.2',
+        boxSizing: 'border-box',
+      }}
+          
+    >
+      <option value="">デバイスを選択</option>
       {devices.map(d => <option key={d} value={d}>{d}</option>)}
     </select>
   );
