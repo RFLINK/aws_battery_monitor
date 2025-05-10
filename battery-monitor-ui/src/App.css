@@ -37,9 +37,100 @@
   }
 }
 
+/**
+ * App.css
+ * デフォルトのブラウザダイアログに寄せたモーダルスタイル
+ **/
+
+/* 全体レイアウト */
 .app-container {
   width: 1280px;
-  margin: 0 auto;       /* 左右中央寄せ */
-  padding: 20px 0;       /* 上下だけ余白 */
+  margin: 0 auto;
+  padding: 20px;
   box-sizing: border-box;
+}
+
+/* モーダル背景レイヤー */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* モーダル本体 */
+.modal {
+  background: #3c7;
+  border: 1px solid #285;
+  border-radius: 4px;
+  width: 160px;
+  max-width: 90%;
+  padding: 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  font-family: sans-serif;
+  color: #000;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+/* タイトル */
+.modal h2 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: normal;
+}
+
+/* テキスト */
+.modal p {
+  margin: 0 0 12px;
+  font-size: 11px;
+}
+
+/* 入力欄 */
+.modal input {
+  width: 100%;
+  padding: 4px 6px;
+  font-size: 13px;
+  border: 1px solid #285;
+  border-radius: 2px;
+  background: #285;
+  box-sizing: border-box;
+  margin-bottom: 12px;
+}
+
+/* ボタン群 */
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* ボタン */
+.modal-actions button {
+  background: transparent;
+  border: 1px solid #285;
+  border-radius: 2px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  color: #000;
+}
+.modal-actions button:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+.modal-actions button:active {
+  background: rgba(0, 0, 0, 0.1);
+}
+
+/* フォーカス時 */
+.modal-actions button:focus,
+.modal input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 120, 215, 0.5);
 }
