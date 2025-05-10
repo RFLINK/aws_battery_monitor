@@ -164,7 +164,7 @@ export default function App() {
         <div className="modal-overlay">
           <div className="modal">
             <h2>削除完了</h2>
-            <p>{resultCount} 件のレコードを削除しました。</p>
+            <p>{resultCount} 件削除。</p>
             <div className="modal-actions">
               <button onClick={() => setShowResultModal(false)}>OK</button>
             </div>
