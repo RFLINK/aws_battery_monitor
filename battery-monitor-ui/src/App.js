@@ -5,8 +5,12 @@ import DateRangePicker from './components/DateRangePicker';
 import './App.css';
 import DataTable from './components/DataTable';
 import DataChart from './components/DataChart';
-import { API_BASE, QUERY_DATA_PATH } from './config';
 import batteryIcon from './icon_darkshape.png'
+import {
+  API_BASE,
+  QUERY_DATA_PATH,
+  DELETE_DATA_PATH    // ← 追加
+} from './config';
 
 function App() {
   const [device, setDevice] = useState('');
@@ -66,6 +70,45 @@ function App() {
     }
   };
 
+  // ------------------------
+  // 追加：データ削除ハンドラ
+  // ------------------------
+  const deleteData = async () => {
+    if (!device) return;
+    if (!window.confirm('本当に表示中のデータを削除しますか？')) return;
+
+    // start/end を UNIX s → sequence_number に変換
+    const startSeq = Math.floor(Math.floor(start.getTime()/1000) / 180);
+    const endSeq   = Math.floor(Math.floor(end  .getTime()/1000) / 180);
+
+    const qs = new URLSearchParams({
+      device_id: device,
+      start:     startSeq,
+      end:       endSeq
+    });
+
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `${API_BASE}${DELETE_DATA_PATH}?${qs}`,
+        { method: 'DELETE', mode: 'cors' }
+      );
+      if (!res.ok) {
+        const err = await res.text();
+        throw new Error(err);
+      }
+      const { deleted } = await res.json();
+      alert(`削除完了: ${deleted} 件のレコードを削除しました。`);
+      // 削除後は再検索
+      fetchData('json');
+    } catch (err) {
+      console.error(err);
+      alert('削除に失敗しました: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   return (
     <div style={{ padding: 20 }}>
       <h1 style={{ display: 'flex', alignItems: 'center', margin: 0 }}>
@@ -94,8 +137,14 @@ function App() {
         <button onClick={() => fetchData('csv')} disabled={!device||loading}>
           CSVダウンロード
         </button>
+        <button
+          onClick={deleteData}
+          disabled={!device||loading}
+          style={{ marginLeft: 8, backgroundColor: '#e74c3c', color: '#fff' }}
+        >
+          削除
+        </button>
       </div>
-
       {/*
         ここがデバッグ用表示の挿入箇所です。
         fetchData() 後に startSeq / endSeq が表示されるようになります。
