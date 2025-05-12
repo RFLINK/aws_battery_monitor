@@ -30,7 +30,6 @@ export default function DataTable({ items }) {
       chunks.push({
         time:        timeStr,
         temperature,
-        humidity,
         avgVoltage,
         voltages:    voltChunk,
       });
@@ -40,7 +39,7 @@ export default function DataTable({ items }) {
 
   // テーブルを包むコンテナ（横幅固定＆横スクロール対応）
   const containerStyle = {
-    width:       '1480px',
+    width:       '1080px',
     margin:      '0 ',
     overflowX:   'auto'
   };
@@ -70,11 +69,10 @@ export default function DataTable({ items }) {
 
   return (
     <div style={containerStyle}>
-      <table style={{ width: '1400px', borderCollapse: 'collapse' }}>
+      <table style={{ width: '1080px', borderCollapse: 'collapse' }}>
         <colgroup>
           <col style={{ width: '150px' }} />{/* Time */}
           <col style={{ width:  '70px' }} />{/* temperature */}
-          <col style={{ width:  '70px' }} />{/* humidity */}
           <col style={{ width:  '70px' }} />{/* avgVoltage */}
           <col />{/* voltages: 残り幅 */}
         </colgroup>
@@ -82,7 +80,6 @@ export default function DataTable({ items }) {
           <tr>
             <th style={thStyle}>Time (JST)</th>
             <th style={thStyle}>temp.</th>
-            <th style={thStyle}>humi.</th>
             <th style={thStyle}>avgVol.</th>
             <th style={thStyle}>voltages (20点／分)</th>
           </tr>
@@ -92,7 +89,6 @@ export default function DataTable({ items }) {
             <tr key={idx}>
               <td style={tdRight}>{row.time}</td>
               <td style={tdRight}>{row.temperature}</td>
-              <td style={tdRight}>{row.humidity}</td>
               <td style={tdRight}>{row.avgVoltage.toFixed(2)}</td>
               <td style={{ border:'1px solid #ccc', padding:'4px', overflowX:'auto' }}>
                 <div style={{

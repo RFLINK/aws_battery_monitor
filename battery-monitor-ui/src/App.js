@@ -109,9 +109,9 @@ export default function App() {
   const onConfirmDelete = async () => {
     try {
       let deletedCount;
-      if (deleteInput === '削除') deletedCount = await deleteRangeData();
-      else if (deleteInput === '全て削除') deletedCount = await deleteAllData();
-      else return alert('「削除」または「全て削除」と正しく入力してください');
+      if (deleteInput === '『 削 除 』') deletedCount = await deleteRangeData();
+      else if (deleteInput === '『 全 て 削 除 』') deletedCount = await deleteAllData();
+      else return handleCancel();
 
       // モーダルを閉じる
       setShowDeleteModal(false);
@@ -146,14 +146,16 @@ export default function App() {
       {showDeleteModal && (
         <div className="modal-overlay">
           <div className="modal">
-            <h2>データを削除します。</h2>
+            <h2>Input words.</h2>
+            {/*
             <p>
               範囲削除 →「削除」<br/>
               全件削除 →「全て削除」</p>
+            */}
             <input type="text" value={deleteInput} onChange={e => setDeleteInput(e.target.value)} />
             <div className="modal-actions">
-              <button onClick={onConfirmDelete}>実行</button>
-              <button onClick={handleCancel}>キャンセル</button>
+              <button onClick={onConfirmDelete}>OK</button>
+              <button onClick={handleCancel}>Cancel</button>
             </div>
           </div>
         </div>

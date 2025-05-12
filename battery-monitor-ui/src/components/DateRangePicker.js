@@ -34,6 +34,7 @@ export default function DateRangePicker({
         selected={start}
         onChange={onStartChange}
         showTimeSelect
+        timeFormat="HH:mm"                  // 24時間制
         dateFormat="yyyy/MM/dd HH:mm"
         popperPlacement="bottom-start"
         popperProps={popperProps}
@@ -43,6 +44,7 @@ export default function DateRangePicker({
         selected={end}
         onChange={onEndChange}
         showTimeSelect
+        timeFormat="HH:mm"                  // 24時間制
         dateFormat="yyyy/MM/dd HH:mm"
         popperPlacement="bottom-start"
         popperProps={popperProps}

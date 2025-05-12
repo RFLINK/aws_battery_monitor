@@ -3,6 +3,7 @@ import json
 from decimal import Decimal
 import boto3
 from boto3.dynamodb.conditions import Key
+import datetime
 
 # 環境変数にテーブル名とインデックス名を設定
 TABLE_NAME = os.environ.get('TABLE_NAME', 'MessageBuffer')
@@ -36,9 +37,10 @@ def lambda_handler(event, context):
         print(f"[ERROR] Invalid integer: start={start}, end={end}")
         return _resp(400, {'error': 'start, end はエポック秒の整数で指定してください'})
 
-    # 2) GSI を使って Query
+    # 2) GSI を使って Query（ページネーション対応）
     print(f"[QUERY] device_id={device_id}, start={start}, end={end}")
     try:
+        all_items = []
         resp = table.query(
             KeyConditionExpression=(
                 Key('device_id').eq(device_id) &
@@ -46,8 +48,22 @@ def lambda_handler(event, context):
             ),
             ScanIndexForward=True
         )
-        items = resp.get('Items', [])
-        print(f"[RESULT] Found {len(items)} items")
+        all_items.extend(resp.get('Items', []))
+
+        # LastEvaluatedKey がある限り、次ページを取得
+        while 'LastEvaluatedKey' in resp:
+            resp = table.query(
+                KeyConditionExpression=(
+                    Key('device_id').eq(device_id) &
+                    Key('sequence_number').between(start, end)
+                ),
+                ScanIndexForward=True,
+                ExclusiveStartKey=resp['LastEvaluatedKey']
+            )
+            all_items.extend(resp.get('Items', []))
+
+        items = all_items
+        print(f"[RESULT] Found total {len(items)} items")
     except Exception as e:
         print(f"[ERROR] DynamoDB query failed: {e}")
         return _resp(500, {'error': '内部サーバーエラー'})
@@ -82,20 +98,51 @@ def lambda_handler(event, context):
 
 
 def _to_csv(items):
-    cols = ['gateway_id', 'device_id', 'sequence_number',
-            'timestamp', 'rssi', 'temperature', 'humidity', 'voltages']
+    # ヘッダー
+    cols = ['datetime', 'rssi', 'temperature', 'avgVol.', 'voltages']
     lines = [','.join(cols)]
     for it in items:
-        row = []
-        for c in cols:
-            v = it.get(c, '')
-            if isinstance(v, list):
-                row.append('"' + ';'.join(str(x) for x in v) + '"')
-            else:
-                row.append(str(v))
-        lines.append(','.join(row))
-    return '\n'.join(lines)
+        # 基本情報
+        seq = it.get('sequence_number', 0)
+        base_epoch = seq * 180  # 秒
+        raw_rssi = it.get('rssi', None)
+        raw_temp = it.get('temperature', None)
 
+        # 数値フォーマット
+        rssi_str = f'{raw_rssi:.2f}' if isinstance(raw_rssi, (int, float)) else ''
+        temp_str = f'{raw_temp:.2f}' if isinstance(raw_temp, (int, float)) else ''
+
+        vs = it.get('voltages', [])
+
+        # 20 点ずつのチャンクに分割
+        for i in range(0, len(vs), 20):
+            chunk = vs[i:i+20]
+            # JST 時刻
+            dt_utc = datetime.datetime.fromtimestamp(base_epoch + i* (60/20), tz=datetime.timezone.utc)
+            # 上の計算がちょっとわかりにくいので明示的に分単位で：
+            # dt_utc = datetime.datetime.fromtimestamp(base_epoch + (i//20)*60, tz=datetime.timezone.utc)
+            # のほうが安全です
+            dt_jst = dt_utc.astimezone(datetime.timezone(datetime.timedelta(hours=9)))
+            time_str = dt_jst.strftime('%Y/%m/%d %H:%M')
+
+            # 平均
+            avg = sum(chunk) / len(chunk) if chunk else 0
+            avg_str = f'{avg:.2f}'
+
+            # チャンク内 voltages
+            voltages_str = '"' + ';'.join(f'{v:.2f}' for v in chunk) + '"'
+
+            # 行を組み立て
+            row = [
+                time_str,
+                rssi_str,
+                temp_str,
+                avg_str,
+                voltages_str
+            ]
+        lines.append(','.join(row))
+
+    return '\n'.join(lines)
 
 def _resp(code, body):
     return {
