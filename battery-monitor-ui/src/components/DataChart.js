@@ -11,72 +11,70 @@ import {
   Line
 } from 'recharts';
 
+/**
+ * DataChart
+ * - items を 20点毎に分割して平均電圧を算出、timestamp ascending の新データを生成して描画
+ * - humidity は除外し、temperature と avgVoltage のみ表示
+ * - ツールチップ内の数値は小数点以下3桁に丸め
+ */
 export default function DataChart({ items }) {
-  // items: Array of { sequence_number, rssi, temperature, humidity, voltages }
-  // 各 item の voltages を 20 点ずつに分割して、1行ごとの平均電圧を含むチャートデータを生成
+  // items: Array<{sequence_number, temperature, humidity, voltages: number[]}> をチャート用に変換
   const chartData = items.flatMap(item => {
-    const { sequence_number, temperature, humidity, voltages } = item;
-    const baseEpochSec = sequence_number * 180;
-    const dataPoints = [];
-    for (let i = 0; i < voltages.length; i += 20) {
-      const chunk = voltages.slice(i, i + 20);
-      const minuteOffset = i / 20;
-      const timestamp = (baseEpochSec + minuteOffset * 60) * 1000;
-      const dt = new Date(timestamp);
-      // X 軸にだけ表示する短いラベル
-      const timeLabel = dt.toLocaleTimeString('ja-JP', {
-        hour:   '2-digit',
-        minute: '2-digit'
-      });
+    const { sequence_number, temperature, voltages } = item;
+    const baseSec = sequence_number * 180;
+    return voltages.reduce((acc, _, idx) => {
+      if (idx % 20 !== 0) return acc;
+      const chunk = voltages.slice(idx, idx + 20);
       const avgVoltage = chunk.reduce((sum, v) => sum + v, 0) / chunk.length;
-      dataPoints.push({
-        timestamp,         // ← 生のミリ秒
-        timeLabel,         // ← XAxis 用の文字列ラベル
+      const ts = (baseSec + (idx / 20) * 60) * 1000;
+      acc.push({
+        timestamp: ts,
         temperature,
-        humidity,
         avgVoltage
       });
-    }
-    return dataPoints;
+      return acc;
+    }, []);
   });
 
   return (
     <div style={{ width: '99%', height: 300, marginBottom: 16 }}>
       <ResponsiveContainer>
-        <LineChart data={chartData}>
+        <LineChart data={chartData} margin={{ top: 16, right: 16, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" />
-		  <XAxis
-		    dataKey="timestamp"
-		    type="number"
-		    domain={['dataMin', 'dataMax']}
-		    tickFormatter={ms => {
-		      const d = new Date(ms);
-		      return d.toLocaleDateString('ja-JP', {
-		      year:  '2-digit',   // 2桁の年
-		      month: '2-digit',   // 2桁の月
-		      day:   '2-digit'    // 2桁の日
-              });
-		    }}
-		  />
+          <XAxis
+            dataKey="timestamp"
+            type="number"
+            domain={['dataMin', 'dataMax']}
+            tickFormatter={ms => new Date(ms).toLocaleDateString('ja-JP', {
+              year: '2-digit', month: '2-digit', day: '2-digit'
+            })}
+          />
           <YAxis />
-		  {chartData.length > 0 && (
           <Tooltip
-		    labelKey="timestamp"
-		    labelFormatter={ms => {
-		      const d = new Date(ms);
-		      return d.toLocaleString('ja-JP', {
-		        year:   'numeric',
-		        month:  '2-digit',
-		        day:    '2-digit',
-		        hour:   '2-digit',
-		        minute: '2-digit'
-		      });
-            }}
-          />)}
-          <Legend verticalAlign="top" height={36} />
-          <Line type="monotone" dataKey="temperature" stroke="#82ca9d" dot={false} />
-          <Line type="monotone" dataKey="humidity" stroke="#88AAFF" dot={false} />
-          <Line type="monotone" dataKey="avgVoltage" stroke="#F5190E" dot={false} />
+            labelFormatter={ms => new Date(ms).toLocaleString('ja-JP', {
+              year: 'numeric', month: '2-digit', day: '2-digit',
+              hour: '2-digit', minute: '2-digit'
+            })}
+            formatter={(value) =>
+              typeof value === 'number' ? Number(value.toFixed(2)) : value
+            }
+          />
+          <Legend verticalAlign="top" height={24} />
+
+          <Line
+            type="monotone"
+            dataKey="temperature"
+            name="temperature"
+            stroke="#82ca9d"
+            dot={false}
+          />
+          <Line
+            type="monotone"
+            dataKey="avgVoltage"
+            name="avgVoltage"
+            stroke="#ff0000"
+            dot={false}
+          />
         </LineChart>
       </ResponsiveContainer>
     </div>
