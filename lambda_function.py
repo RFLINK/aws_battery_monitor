@@ -40,12 +40,10 @@ def lambda_handler(event, context):
 
     # Handle ping: ACK only
     if event['destination'] == 'ping':
-        _send_ack(gateway_id, device_id, seq)
-        print(f"[Ping] ACK sent for ping {device_id}_{seq}")
-        return {'status': 'ping_ack_sent'}
+        seq = 0
 
     # Ignore non-server
-    if event['destination'] != 'server':
+    if event['destination'] not in ('server', 'ping'):
         return {'status': 'ignored_destination'}
 
     # 3) Initial write + ACK

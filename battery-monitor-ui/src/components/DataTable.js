@@ -39,7 +39,7 @@ export default function DataTable({ items }) {
 
   // テーブルを包むコンテナ（横幅固定＆横スクロール対応）
   const containerStyle = {
-    width:       '1080px',
+    width:       '1200px',
     margin:      '0 ',
     overflowX:   'auto'
   };
@@ -69,7 +69,7 @@ export default function DataTable({ items }) {
 
   return (
     <div style={containerStyle}>
-      <table style={{ width: '1080px', borderCollapse: 'collapse' }}>
+      <table style={{ width: '1200px', borderCollapse: 'collapse' }}>
         <colgroup>
           <col style={{ width: '150px' }} />{/* Time */}
           <col style={{ width:  '70px' }} />{/* temperature */}
