@@ -134,3 +134,40 @@
   outline: none;
   box-shadow: 0 0 0 2px rgba(0, 120, 215, 0.5);
 }
+
+.date-picker-wrapper {
+  display: inline-block;    /* 横並びを壊さない */
+  width: 120px !important;  /* input と同じ幅に */
+}
+
+/* DatePicker が挿入する input-container も */
+.date-picker-wrapper
+  .react-datepicker__input-container,
+.date-picker-wrapper
+  .react-datepicker__input-container--open {
+  width: 100% !important;
+}
+
+/* 念のため input 自体も */
+.date-picker-wrapper input {
+  width: 100% !important;
+  box-sizing: border-box;      /* padding／border を含めて 100% になるように */
+}
+
+/* ボタンを横並びにするコンテナ（必要なら） */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 全ボタンに共通であてるクラス */
+.toolbar-button {
+  /* 固定幅 or 最低幅を指定 */
+  min-width: 30px;
+  padding: 2px 8px;
+  height: 26px;
+  font-size: 13px;
+  box-sizing: border-box;
+  /* 必要なら色やボーダーもここで統一 */
+}

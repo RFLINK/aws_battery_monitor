@@ -3,51 +3,65 @@ import React from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
-// Floating-UI 用の設定
+const CenteredInput = React.forwardRef(({ value, onClick, disabled, placeholder }, ref) => (
+  <input
+    ref={ref}
+    value={value}
+    placeholder={placeholder}
+    onClick={onClick}
+    disabled={disabled}
+    style={{
+      width: 120,
+      textAlign: 'center',
+      cursor: disabled ? 'default' : 'pointer',
+      backgroundColor: disabled ? '#f5f5f5' : 'white',  // 背景色を指定
+      opacity: 1,                                        // opacity の上書き
+      color: disabled ? '#555' : '#000',                 // 文字色の上書き
+    }}
+  />
+));
+
 const popperProps = {
+  strategy: 'fixed',            // ← ここを追加
   modifiers: [
-    {
-      name: 'offset',
-      options: { offset: [0, 8] }       // 親要素からのオフセット
-    },
-    {
-      name: 'preventOverflow',
-      options: { boundary: 'viewport' }  // ビューポート内に収める
-    }
+    { name: 'offset',          options: { offset: [0, 8] } },
+    { name: 'preventOverflow', options: { boundary: 'viewport' } }
   ]
 };
 
 export default function DateRangePicker({
-  start, end, onStartChange, onEndChange
+  start, end, onStartChange, onEndChange, disableEnd = false
 }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 8,
-        marginTop: -2,   // ↑ 上に 8px 動かす
-        marginLeft: 0,  // ← 右へ 16px 動かす
-      }}
-    >
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: -2 }}>
+      {/* 開始時刻にも customInput を指定 */}
       <DatePicker
+        wrapperClassName="date-picker-wrapper"
         selected={start}
         onChange={onStartChange}
         showTimeSelect
-        timeFormat="HH:mm"                  // 24時間制
+        timeFormat="HH:mm"
         dateFormat="yyyy/MM/dd HH:mm"
         popperPlacement="bottom-start"
         popperProps={popperProps}
+        customInput={<CenteredInput />}
       />
-      <span style={{ margin: '0 0px' }}>{'~'}</span>
+
+      <span style={{ position: 'relative', top: 2 }}>〜</span>
+  
+      {/* 終了時刻 */}
       <DatePicker
-        selected={end}
+        wrapperClassName="date-picker-wrapper"
+        selected={disableEnd ? null : end}
         onChange={onEndChange}
         showTimeSelect
-        timeFormat="HH:mm"                  // 24時間制
+        timeFormat="HH:mm"
         dateFormat="yyyy/MM/dd HH:mm"
+        disabled={disableEnd}
+        placeholderText={disableEnd ? 'now' : undefined}
         popperPlacement="bottom-start"
         popperProps={popperProps}
+        customInput={<CenteredInput />}
       />
     </div>
   );

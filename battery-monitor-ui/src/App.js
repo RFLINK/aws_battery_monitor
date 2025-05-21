@@ -9,9 +9,10 @@ import { API_BASE, QUERY_DATA_PATH, DELETE_DATA_PATH } from './config';
 
 export default function App() {
   const [device, setDevice] = useState('');
-  const [start, setStart]   = useState(new Date(Date.now() - 3600*24*7*1000));
+  const [start, setStart]   = useState(new Date(Date.now() - 3600*24*3*1000));
   const [end,   setEnd]     = useState(new Date());
   const [data,  setData]    = useState([]);
+  const [manualEnd, setManualEnd] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // 削除モーダル用ステート
@@ -27,7 +28,7 @@ export default function App() {
     if (!device) return;
     const now = new Date();
     setEnd(now);
-    setStart(new Date(now.getTime() - 3600 * 24 * 7 * 1000));
+    setStart(new Date(now.getTime() - 3600 * 24 * 3 * 1000));
     fetchData('json');
   }, [device]);
 
@@ -50,8 +51,17 @@ export default function App() {
   const fetchData = async (format = 'json') => {
     if (!device) return;
     setLoading(true);
+
+    // 終了時刻を決定（autoEnd=trueならNow、それ以外はユーザー指定のend）
+    const now     = new Date();
+    const endTime = manualEnd ? end : now;
+    if (!manualEnd) {
+      // 自動モード時は常に end に now をセットしておく
+      setEnd(now);
+    }
+
     const startSeq = Math.floor(start.getTime() / 1000 / 180);
-    const endSeq   = Math.floor(end.getTime()   / 1000 / 180);
+    const endSeq   = Math.floor(endTime.getTime()   / 1000 / 180);
     const qs = new URLSearchParams({ device_id: device, start: startSeq, end: endSeq, format });
     try {
       const url = `${API_BASE}${QUERY_DATA_PATH}?${qs}`;
@@ -135,11 +145,48 @@ export default function App() {
       </h1>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', margin: '20px 0 20px 20px' }}>
+      
         <DeviceSelector value={device} onChange={setDevice} />
-        <DateRangePicker start={start} end={end} onStartChange={setStart} onEndChange={setEnd} />
-        <button onClick={() => fetchData('json')} disabled={!device||loading}>検索</button>
-        <button onClick={() => fetchData('csv')} disabled={!device||loading}>CSVダウンロード</button>
-        <button className="btn-delete" disabled={!device||loading} onClick={() => setShowDeleteModal(true)}>削除</button>
+
+        {/* DatePicker コンポーネント側に「disableEnd」を反転して渡す */}
+        <DateRangePicker
+          start={start}
+          end={end}
+          onStartChange={setStart}
+          onEndChange={setEnd}
+          disableEnd={!manualEnd}
+        />
+        {/* チェックONで手動入力ONに（OFFだと自動で now に合わせる） */}
+        <label style={{ marginLeft: 0, marginTop: -2, fontSize: 12 }}>
+          <input
+            type="checkbox"
+            checked={manualEnd}
+            onChange={e => setManualEnd(e.target.checked)}
+          />
+        </label>
+        
+       <button
+         className="toolbar-button"
+         onClick={() => fetchData('json')}
+         disabled={!device||loading}
+       >
+         検索
+       </button>
+       <button
+         className="toolbar-button"
+         onClick={() => fetchData('csv')}
+         disabled={!device||loading}
+       >
+         CSV
+       </button>
+       <button
+         className="toolbar-button btn-delete"
+         disabled={!device||loading}
+         onClick={() => setShowDeleteModal(true)}
+       >
+         削除
+       </button>
+
       </div>
 
       {/* 削除確認モーダル */}
