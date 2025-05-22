@@ -3,12 +3,14 @@ import React from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
-const CenteredInput = React.forwardRef(({ value, onClick, disabled, placeholder }, ref) => (
+const CenteredInput = React.forwardRef(({ value, onClick, onChange, onKeyDown, disabled, placeholder }, ref) => (
   <input
     ref={ref}
     value={value}
     placeholder={placeholder}
     onClick={onClick}
+    onChange={onChange}     // ← これを追加
+    onKeyDown={onKeyDown}   // ← これを追加
     disabled={disabled}
     style={{
       width: 120,

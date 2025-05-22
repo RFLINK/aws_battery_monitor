@@ -36,18 +36,38 @@ export default function DataChart({ items }) {
     }, []);
   });
 
+  // 1) 最小・最大を取り出し
+  const times = chartData.map(d => d.timestamp);
+  if (times.length === 0) return null; // 念のため空データガード
+  const minTs  = Math.min(...times);
+  const maxTs  = Math.max(...times);
+
+  // 2) 00:00 のタイムスタンプだけを集める
+  const midnightTicks = [];
+  const d = new Date(minTs);
+  d.setHours(0,0,0,0);
+  if (d.getTime() < minTs) d.setDate(d.getDate() + 1);
+  while (d.getTime() <= maxTs) {
+    midnightTicks.push(d.getTime());
+    d.setDate(d.getDate() + 1);
+  }
+
   return (
     <div style={{ width: '99%', height: 300, marginBottom: 16 }}>
       <ResponsiveContainer>
-        <LineChart data={chartData} margin={{ top: 16, right: 16, left: 0, bottom: 0 }}>
+        <LineChart data={chartData} margin={{ top: 0, right: 16, left: -30, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="timestamp"
-            type="number"
-            domain={['dataMin', 'dataMax']}
-            tickFormatter={ms => new Date(ms).toLocaleDateString('ja-JP', {
-              year: '2-digit', month: '2-digit', day: '2-digit'
-            })}
+            type="number"           // 数値スケールに切り替え
+            scale="time"            // 時間軸として扱う
+            domain={[minTs, maxTs]}
+            ticks={midnightTicks}   // 00:00 のみを目盛りに
+            tickFormatter={ms => 
+              new Date(ms).toLocaleDateString('ja-JP', {
+                year: '2-digit', month: '2-digit', day: '2-digit'
+              })
+            }
           />
           <YAxis />
           <Tooltip

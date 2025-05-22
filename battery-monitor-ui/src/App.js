@@ -7,6 +7,16 @@ import DataChart from './components/DataChart';
 import batteryIcon from './icon_darkshape.png';
 import { API_BASE, QUERY_DATA_PATH, DELETE_DATA_PATH } from './config';
 
+const getShowTableCookie = () => {
+  const m = document.cookie.match(/(?:^|;\s*)showTable=([^;]+)/);
+  return m ? m[1] === 'true' : false;
+};
+
+// クッキーに showTable 状態を保存（1 年間有効）
+const setShowTableCookie = (val) => {
+  document.cookie = `showTable=${val}; path=/; max-age=${60*60*24*365}`;
+};
+
 export default function App() {
   const [device, setDevice] = useState('');
   const [start, setStart]   = useState(new Date(Date.now() - 3600*24*3*1000));
@@ -14,6 +24,7 @@ export default function App() {
   const [data,  setData]    = useState([]);
   const [manualEnd, setManualEnd] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showTable, setShowTable] = useState(() => getShowTableCookie());
 
   // 削除モーダル用ステート
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -47,6 +58,10 @@ export default function App() {
     return () => window.removeEventListener('keydown', handler);
   }, [showDeleteModal, showResultModal, deleteInput]);
 
+  useEffect(() => {
+    setShowTableCookie(showTable);
+  }, [showTable]);
+
   // データ取得
   const fetchData = async (format = 'json') => {
     if (!device) return;
@@ -61,7 +76,7 @@ export default function App() {
     }
 
     const startSeq = Math.floor(start.getTime() / 1000 / 180);
-    const endSeq   = Math.floor(endTime.getTime()   / 1000 / 180);
+    const endSeq   = Math.floor(endTime.getTime()   / 1000 / 180) - 1;
     const qs = new URLSearchParams({ device_id: device, start: startSeq, end: endSeq, format });
     try {
       const url = `${API_BASE}${QUERY_DATA_PATH}?${qs}`;
@@ -83,7 +98,7 @@ export default function App() {
   const deleteRangeData = async () => {
     setLoading(true);
     const startSeq = Math.floor(start.getTime() / 1000 / 180);
-    const endSeq   = Math.floor(end.getTime()   / 1000 / 180);
+    const endSeq   = Math.floor(end.getTime()   / 1000 / 180) - 1;
     const qs = new URLSearchParams({ device_id: device, start: startSeq, end: endSeq });
     try {
       const res = await fetch(`${API_BASE}${DELETE_DATA_PATH}?${qs}`, { method: 'DELETE', mode: 'cors' });
@@ -187,6 +202,12 @@ export default function App() {
          削除
        </button>
 
+       <button 
+          className="toolbar-button" 
+          onClick={() => setShowTable(v => !v)}>
+         {showTable ? 'テーブル表示' : 'テーブル非表示'}
+       </button>
+       
       </div>
 
       {/* 削除確認モーダル */}
@@ -221,9 +242,11 @@ export default function App() {
         </div>
       )}
 
+     {/* ここでテーブルを表示するかのスイッチを追加 */}
+
       {loading
         ? <div>Loading…</div>
-        : <><DataChart items={data} /><DataTable items={data} /></>
+        : <><DataChart items={data} />{ showTable && <DataTable items={data} /> }</>
       }
     </div>
   );

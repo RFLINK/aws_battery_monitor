@@ -19,7 +19,7 @@ export default function DataTable({ items }) {
   // 行データを生成（3分＝groupSize×1分ごとに分割）
   const rows = useMemo(() => {
     return items.flatMap(item => {
-      const { gateway_id, sequence_number, temperature, voltages } = item;
+      const { gateway_id, sequence_number, rssi, temperature, voltages } = item;
       const baseEpochSec = sequence_number * 180;
       const groupSize = voltages.length / 20;
       return Array.from({ length: groupSize }).map((_, minuteOffset) => {
@@ -34,6 +34,7 @@ export default function DataTable({ items }) {
         });
         return {
           gateway_id,
+          rssi,
           time,
           timeMs,
           temperature,
@@ -61,30 +62,36 @@ export default function DataTable({ items }) {
   };
 
   // スタイル定義
-  const containerStyle = { width: '1200px', overflowX: 'auto', paddingRight: '30px' };
-  const thStyle = {
+  const containerStyle = { width: '1230px', overflowX: 'auto', paddingRight: '30px' };
+  const thStylePointer = {
     border: '1px solid #ccc', padding: '4px', background: '#f0f0f0',
     textAlign: 'center', cursor: 'pointer', userSelect: 'none'
+  };
+  const thStyle = {
+    border: '1px solid #ccc', padding: '4px', background: '#f0f0f0',
+    textAlign: 'center', userSelect: 'none'
   };
   const tdRight = { border: '1px solid #ccc', padding: '4px', textAlign: 'center', whiteSpace: 'nowrap' };
 
   return (
     <div>
       <div style={containerStyle}>
-        <table style={{ width: '1200px', borderCollapse: 'collapse'}}>
+        <table style={{ width: '1230px', borderCollapse: 'collapse'}}>
           <colgroup>
             <col style={{ width: '150px' }} /> {/* Time */}
             <col style={{ width: '60px' }} />  {/* GW */}
+            <col style={{ width: '60px' }} />  {/* RSSI */}
             <col style={{ width: '60px' }} />  {/* temp */}
             <col style={{ width: '60px' }} />  {/* avgV */}
             <col />                            {/* voltages */}
             </colgroup>
           <thead>
             <tr>
-              <th style={thStyle} onClick={onToggleSort}>
+              <th style={thStylePointer} onClick={onToggleSort}>
                 time (JST) {sortAsc ? '▲' : '▼'}
               </th>
               <th style={thStyle}>gw</th>
+              <th style={thStyle}>rssi</th>
               <th style={thStyle}>temp.</th>
               <th style={thStyle}>avgV.</th>
               <th style={thStyle}>voltages (20点／分)</th>
@@ -105,6 +112,13 @@ export default function DataTable({ items }) {
                   {isGroupStart && (
                     <td style={tdRight} rowSpan={row.groupSize}>
                       {row.gateway_id}
+                    </td>
+                  )}
+
+                  {/* gateway_id はグループ開始行にのみ rowSpan で表示 */}
+                  {isGroupStart && (
+                    <td style={tdRight} rowSpan={row.groupSize}>
+                      {row.rssi}
                     </td>
                   )}
 
