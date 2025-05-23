@@ -1,5 +1,5 @@
 // src/components/DataChart.js
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ResponsiveContainer,
   LineChart,
@@ -11,90 +11,154 @@ import {
   Line
 } from 'recharts';
 
-/**
- * DataChart
- * - items ‚ğ 20“_–ˆ‚É•ªŠ„‚µ‚Ä•½‹Ï“dˆ³‚ğZoAtimestamp ascending ‚ÌVƒf[ƒ^‚ğ¶¬‚µ‚Ä•`‰æ
- * - humidity ‚ÍœŠO‚µAtemperature ‚Æ avgVoltage ‚Ì‚İ•\¦
- * - ƒc[ƒ‹ƒ`ƒbƒv“à‚Ì”’l‚Í¬”“_ˆÈ‰º3Œ…‚ÉŠÛ‚ß
- */
+const getShowTempCookie = () => {
+  const m = document.cookie.match(/(?:^|;\s*)showTemp=([^;]+)/);
+  return m ? m[1] === 'true' : true;
+};
+const setShowTempCookie = (val) => {
+  document.cookie = `showTemp=${val}; path=/; max-age=${60*60*24*365}`;
+};
+
+const getShowVoltageCookie = () => {
+  const m = document.cookie.match(/(?:^|;\s*)showVoltage=([^;]+)/);
+  return m ? m[1] === 'true' : true;
+};
+const setShowVoltageCookie = (val) => {
+  document.cookie = `showVoltage=${val}; path=/; max-age=${60*60*24*365}`;
+};
+
 export default function DataChart({ items }) {
-  // items: Array<{sequence_number, temperature, humidity, voltages: number[]}> ‚ğƒ`ƒƒ[ƒg—p‚É•ÏŠ·
+  // â‘  ãƒˆã‚°ãƒ«ç”¨ state
+  const [showTemp, setShowTemp]       = useState(getShowTempCookie());
+  const [showVoltage, setShowVoltage] = useState(getShowVoltageCookie());
+
+  // â‘¡ å…ƒã® chartData ä½œæˆãƒ­ã‚¸ãƒƒã‚¯ã¯ãã®ã¾ã¾
   const chartData = items.flatMap(item => {
     const { sequence_number, temperature, voltages } = item;
     const baseSec = sequence_number * 180;
     return voltages.reduce((acc, _, idx) => {
       if (idx % 20 !== 0) return acc;
       const chunk = voltages.slice(idx, idx + 20);
-      const avgVoltage = chunk.reduce((sum, v) => sum + v, 0) / chunk.length;
-      const ts = (baseSec + (idx / 20) * 60) * 1000;
-      acc.push({
-        timestamp: ts,
-        temperature,
-        avgVoltage
-      });
+      const avgVoltage = chunk.reduce((s,v) => s+v, 0) / chunk.length;
+      const ts = (baseSec + (idx/20)*60)*1000;
+      acc.push({ timestamp: ts, temperature, avgVoltage });
       return acc;
     }, []);
   });
 
-  // 1) Å¬EÅ‘å‚ğæ‚èo‚µ
+  // â‘¢ ç©ºãƒ‡ãƒ¼ã‚¿ã‚¬ãƒ¼ãƒ‰ï¼†è»¸ã¾ã‚ã‚Šã¯ãã®ã¾ã¾
   const times = chartData.map(d => d.timestamp);
-  if (times.length === 0) return null; // ”O‚Ì‚½‚ß‹óƒf[ƒ^ƒK[ƒh
-  const minTs  = Math.min(...times);
-  const maxTs  = Math.max(...times);
-
-  // 2) 00:00 ‚Ìƒ^ƒCƒ€ƒXƒ^ƒ“ƒv‚¾‚¯‚ğW‚ß‚é
+  if (times.length === 0) return null;
+  const minTs = Math.min(...times), maxTs = Math.max(...times);
   const midnightTicks = [];
-  const d = new Date(minTs);
-  d.setHours(0,0,0,0);
-  if (d.getTime() < minTs) d.setDate(d.getDate() + 1);
+  const d = new Date(minTs); d.setHours(0,0,0,0);
+  if (d.getTime() < minTs) d.setDate(d.getDate()+1);
   while (d.getTime() <= maxTs) {
     midnightTicks.push(d.getTime());
-    d.setDate(d.getDate() + 1);
+    d.setDate(d.getDate()+1);
   }
 
+  const legendPayload = [
+    {
+      dataKey: 'temperature',
+      value: 'temperature',
+      type: 'line',
+      color: '#82ca9d',
+      inactive: !showTemp,      // state ã«å¿œã˜ãŸãƒ•ãƒ©ã‚°
+    },
+    {
+      dataKey: 'avgVoltage',
+      value: 'avgVoltage',
+      type: 'line',
+      color: '#ff0000',
+      inactive: !showVoltage,
+    }
+  ];
+
   return (
-    <div style={{ width: '99%', height: 300, marginBottom: 16 }}>
+    <div style={{ width: '99%', height: 350, marginBottom: 8 }}>
+      {/* â‘£ ãƒã‚§ãƒƒã‚¯ãƒœãƒƒã‚¯ã‚¹ */}
       <ResponsiveContainer>
-        <LineChart data={chartData} margin={{ top: 0, right: 16, left: -30, bottom: 0 }}>
+        <LineChart
+          data={chartData}
+          margin={{ top: 0, right: 16, left: -16, bottom: 24 }}
+        >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
             dataKey="timestamp"
-            type="number"           // ”’lƒXƒP[ƒ‹‚ÉØ‚è‘Ö‚¦
-            scale="time"            // ŠÔ²‚Æ‚µ‚Äˆµ‚¤
+            type="number"
+            scale="time"
             domain={[minTs, maxTs]}
-            ticks={midnightTicks}   // 00:00 ‚Ì‚İ‚ğ–Ú·‚è‚É
-            tickFormatter={ms => 
+            ticks={midnightTicks}
+            tickFormatter={ms =>
               new Date(ms).toLocaleDateString('ja-JP', {
                 year: '2-digit', month: '2-digit', day: '2-digit'
               })
             }
           />
-          <YAxis />
+          <YAxis 
+            domain={ !showTemp ? ['dataMin', 'dataMax'] : undefined }
+            tickFormatter={value => Number(value.toFixed(1))}
+          />
           <Tooltip
             labelFormatter={ms => new Date(ms).toLocaleString('ja-JP', {
               year: 'numeric', month: '2-digit', day: '2-digit',
               hour: '2-digit', minute: '2-digit'
             })}
-            formatter={(value) =>
+            formatter={value =>
               typeof value === 'number' ? Number(value.toFixed(2)) : value
             }
           />
-          <Legend verticalAlign="top" height={24} />
-
-          <Line
-            type="monotone"
-            dataKey="temperature"
-            name="temperature"
-            stroke="#82ca9d"
-            dot={false}
+          <Legend
+            verticalAlign="top"
+            align="center"        // æ°´å¹³ã‚»ãƒ³ã‚¿ãƒ¼
+            height={32}
+            wrapperStyle={{ 
+              cursor: 'pointer',
+              margin: '0px 0px 0px 28px'  // ä¸Š:pxã€å³:0ã€ä¸‹:0ã€å·¦:px
+            }}
+            payload={legendPayload}
+            formatter={(value, entry) => (
+              // inactive ãƒ•ãƒ©ã‚°ã§åŠé€æ˜ã«
+              <span style={{ opacity: entry.inactive ? 0.5 : 1 }}>
+                {value}
+              </span>
+            )}
+            onClick={(entry) => {
+              if (entry.dataKey === 'temperature') {
+                setShowTemp(prev => {
+                  const next = !prev;
+                  setShowTempCookie(next);
+                  return next;
+                });
+              } else if (entry.dataKey === 'avgVoltage') {
+                setShowVoltage(prev => {
+                  const next = !prev;
+                  setShowVoltageCookie(next);
+                  return next;
+                });
+              }
+            }}
           />
-          <Line
-            type="monotone"
-            dataKey="avgVoltage"
-            name="avgVoltage"
-            stroke="#ff0000"
-            dot={false}
-          />
+          {/* â‘¤ æ¡ä»¶ä»˜ããƒ¬ãƒ³ãƒ€ãƒªãƒ³ã‚° */}
+          {showTemp && (
+            <Line
+              type="monotone"
+              dataKey="temperature"
+              name="temperature"
+              stroke="#82ca9d"
+              dot={false}
+            />
+          )}
+          {showVoltage && (
+            <Line
+              type="monotone"
+              dataKey="avgVoltage"
+              name="avgVoltage"
+              stroke="#ff0000"
+              dot={false}
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
     </div>
