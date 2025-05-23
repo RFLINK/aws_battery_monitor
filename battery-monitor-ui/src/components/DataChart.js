@@ -81,7 +81,7 @@ export default function DataChart({ items }) {
       <ResponsiveContainer>
         <LineChart
           data={chartData}
-          margin={{ top: 0, right: 16, left: -20, bottom: 24 }}
+          margin={{ top: 0, right: 16, left: -20, bottom: 8 }}
         >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
