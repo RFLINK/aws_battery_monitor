@@ -9,7 +9,7 @@ import { API_BASE, QUERY_DATA_PATH, DELETE_DATA_PATH } from './config';
 
 const getShowTableCookie = () => {
   const m = document.cookie.match(/(?:^|;\s*)showTable=([^;]+)/);
-  return m ? m[1] === 'true' : false;
+  return m ? m[1] === 'true' : true;
 };
 
 // クッキーに showTable 状態を保存（1 年間有効）
@@ -180,19 +180,19 @@ export default function App() {
           />
         </label>
         
-       <button
-         className="toolbar-button"
-         onClick={() => fetchData('json')}
-         disabled={!device||loading}
-       >
-         検索
-       </button>
-       <button
-         className="toolbar-button"
-         onClick={() => fetchData('csv')}
-         disabled={!device||loading}
-       >
-         CSV
+        <button
+          className="toolbar-button"
+          onClick={() => fetchData('json')}
+          disabled={!device||loading}
+        >
+          検索
+        </button>
+        <button
+          className="toolbar-button"
+          onClick={() => fetchData('csv')}
+          disabled={!device||loading}
+        >
+          CSV
        </button>
        <button
          className="toolbar-button btn-delete"
@@ -201,14 +201,14 @@ export default function App() {
        >
          削除
        </button>
-
+       {/* 続きを表示ボタンを入れたので、これは不要に・・。
        <button 
           className="toolbar-button" 
           onClick={() => setShowTable(v => !v)}>
          {showTable ? 'テーブル表示' : 'テーブル非表示'}
        </button>
-       
-      </div>
+       */}       
+     </div>
 
       {/* 削除確認モーダル */}
       {showDeleteModal && (
@@ -243,7 +243,6 @@ export default function App() {
       )}
 
      {/* ここでテーブルを表示するかのスイッチを追加 */}
-
       {loading
         ? <div>Loading…</div>
         : <><DataChart items={data} />{ showTable && <DataTable items={data} /> }</>
