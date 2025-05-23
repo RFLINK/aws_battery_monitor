@@ -135,6 +135,33 @@
   box-shadow: 0 0 0 2px rgba(0, 120, 215, 0.5);
 }
 
+.modal-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  /* ”¼“§–¾‚ğ‚â‚ß‚½‚¢‚È‚ç ƒ¿ ‚ğ 1 ‚É */
+  background: rgba(0,0,0,0.4);
+  z-index: 10000;       /* © ’Ç‰Á */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-content > * + * {
+  position: relative;   /* © ’Ç‰Á */
+  margin-top: 8px;
+  padding: 16px;         /* ’†‚Ì—]”’‚ğL‚­ */
+  border-radius: 12px;   /* Šp‚ğŠÛ‚­ */
+  z-index: 10001;       /* © ’Ç‰Á */
+  /* Šù‘¶‚Ì”wŒiF‚Í‚»‚Ì‚Ü‚Ü‚ÅOK */
+  background: #fff;     /* or #3c7 */
+  /* ‚ ‚Æ‚ÍŠù‘¶‚Ì padding/border-radius “™ */
+}
+.modal-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  cursor: pointer;
+}
+
 .date-picker-wrapper {
   display: inline-block;    /* ‰¡•À‚Ñ‚ğ‰ó‚³‚È‚¢ */
   width: 120px !important;  /* input ‚Æ“¯‚¶•‚É */

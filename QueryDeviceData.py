@@ -61,7 +61,8 @@ def lambda_handler(event, context):
             all_items.extend(resp.get('Items', []))
 
         # 3) ping 用 seq=0 レコードを除外
-        filtered = [item for item in all_items if item.get('sequence_number', 0) != 0]
+        # filtered = [item for item in all_items if item.get('sequence_number', 0) != 0]
+        filtered = all_items
         print(f"[RESULT] Retrieved {len(all_items)} items, filtered to {len(filtered)} (seq!=0)")
 
     except Exception as e:

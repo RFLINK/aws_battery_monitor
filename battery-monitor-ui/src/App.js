@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Settings } from 'lucide-react';  // 歯車アイコン
 import DeviceSelector from './components/DeviceSelector';
 import DateRangePicker from './components/DateRangePicker';
 import './App.css';
@@ -34,6 +35,8 @@ export default function App() {
   const [showResultModal, setShowResultModal] = useState(false);
   const [resultCount, setResultCount]         = useState(0);
 
+console.log('🔧 Settings:', Settings);
+
   // デバイス選択時に自動検索
   useEffect(() => {
     if (!device) return;
@@ -61,6 +64,42 @@ export default function App() {
   useEffect(() => {
     setShowTableCookie(showTable);
   }, [showTable]);
+
+  //設定ボタンモーダル
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsData, setSettingsData] = useState(null);
+  const [loadingSettings, setLoadingSettings] = useState(false);
+
+  const loadSettings = async () => {
+    if (!device) return;
+    setLoadingSettings(true);
+    try {
+      // sequence=0 のレコードのみ取得するなら start=0, end=0 を渡す
+      const qs = new URLSearchParams({
+        device_id: device,
+        start:       '0',
+        end:         '0',
+        format:      'json',
+      });
+      const res = await fetch(`${API_BASE}${QUERY_DATA_PATH}?${qs}`);
+      const json = await res.json();
+      const items = Array.isArray(json)
+        ? json
+        : (Array.isArray(json.Items) ? json.Items : []);
+      const record = items[0] || null;
+      setSettingsData(record);
+    } catch (e) {
+      console.error(e);
+      setSettingsData({ error: '取得失敗' });
+    } finally {
+      setLoadingSettings(false);
+    }
+  };
+
+  const onSettingsClick = () => {
+    loadSettings();
+    setShowSettings(true);
+  };
 
   // データ取得
   const fetchData = async (format = 'json') => {
@@ -201,14 +240,52 @@ export default function App() {
        >
          削除
        </button>
-       {/* 続きを表示ボタンを入れたので、これは不要に・・。
-       <button 
-          className="toolbar-button" 
-          onClick={() => setShowTable(v => !v)}>
-         {showTable ? 'テーブル表示' : 'テーブル非表示'}
-       </button>
-       */}       
-     </div>
+        <button
+          onClick={onSettingsClick}
+          title="設定"
+          style={{
+            background: 'none',
+            border: 'none',
+            padding: '4px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center'
+          }}
+        >
+        <Settings size={20} strokeWidth={2} color="#333" />
+        </button>
+        {showSettings && (
+          <div className="modal-backdrop" onClick={() => setShowSettings(false)}>
+            <div className="modal-content" onClick={e => e.stopPropagation()}>
+              <span className="modal-close" onClick={() => setShowSettings(false)}>✕</span>
+              <h3>デバイス {device} の sequence=0 情報</h3>
+              {loadingSettings ? (
+                <p>読み込み中…</p>
+              ) : settingsData ? (
+               <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                 {/* ① db_update_time を JST に変換して表示 */}
+                 {settingsData.db_update_time !== undefined && (
+                   <p>
+                     更新時刻 (JST):{' '}
+                     {new Date(settingsData.db_update_time * 1000)
+                       .toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
+                   </p>
+                 )}
+                 {/* ② その他のフィールドも見やすく */}
+                 {Object.entries(settingsData).map(([key, val]) => (
+                   <p key={key}>
+                     <strong>{key}:</strong>{' '}
+                     {JSON.stringify(val)}
+                   </p>
+                 ))}
+               </div>
+              ) : (
+                <p>データがありません</p>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* 削除確認モーダル */}
       {showDeleteModal && (
@@ -240,8 +317,7 @@ export default function App() {
             </div>
           </div>
         </div>
-      )}
-
+      )}      
      {/* ここでテーブルを表示するかのスイッチを追加 */}
       {loading
         ? <div>Loading…</div>

@@ -83,14 +83,7 @@ export default function DataTable({ items }) {
     <div>
       <div style={containerStyle}>
         <table style={{ width: '1230px', borderCollapse: 'collapse' }}>
-          <colgroup>
-            <col style={{ width: '150px' }} /> {/* time */}
-            <col style={{ width: '60px' }} />  {/* gw */}
-            <col style={{ width: '60px' }} />  {/* rssi */}
-            <col style={{ width: '60px' }} />  {/* temp. */}
-            <col style={{ width: '60px' }} />  {/* avgV. */}
-            <col />                            {/* voltages */}
-          </colgroup>
+          <colgroup><col style={{ width: '150px' }} /><col style={{ width: '60px' }} /><col style={{ width: '60px' }} /><col style={{ width: '60px' }} /><col style={{ width: '60px' }} /><col /></colgroup>
           <thead>
             <tr>
               <th style={thSortable} onClick={onToggleSort}>
