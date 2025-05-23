@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings } from 'lucide-react';  // 歯車アイコン
+import { Search, FileText, Trash2, Settings } from 'lucide-react';
 import DeviceSelector from './components/DeviceSelector';
 import DateRangePicker from './components/DateRangePicker';
 import './App.css';
@@ -223,36 +223,33 @@ console.log('🔧 Settings:', Settings);
           className="toolbar-button"
           onClick={() => fetchData('json')}
           disabled={!device||loading}
+          title="検索"
         >
-          検索
+          <Search size={20} />
         </button>
         <button
           className="toolbar-button"
           onClick={() => fetchData('csv')}
           disabled={!device||loading}
+          title="CSV"
         >
-          CSV
-       </button>
-       <button
+          <FileText size={20} />
+        </button>
+        <button
          className="toolbar-button btn-delete"
          disabled={!device||loading}
          onClick={() => setShowDeleteModal(true)}
-       >
-         削除
-       </button>
+         title="削除"
+        >
+          <Trash2 size={20} />
+        </button>
         <button
+          className="toolbar-button"
+          disabled={!device||loading}
           onClick={onSettingsClick}
           title="設定"
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: '4px',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center'
-          }}
         >
-        <Settings size={20} strokeWidth={2} color="#333" />
+          <Settings size={20} />
         </button>
         {showSettings && (
           <div className="modal-backdrop" onClick={() => setShowSettings(false)}>
