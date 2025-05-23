@@ -81,7 +81,7 @@ export default function DataChart({ items }) {
       <ResponsiveContainer>
         <LineChart
           data={chartData}
-          margin={{ top: 0, right: 16, left: -16, bottom: 24 }}
+          margin={{ top: 0, right: 16, left: -20, bottom: 24 }}
         >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
@@ -95,10 +95,12 @@ export default function DataChart({ items }) {
                 year: '2-digit', month: '2-digit', day: '2-digit'
               })
             }
+            tick={{ fontSize: 12 }}
           />
           <YAxis 
             domain={ !showTemp ? ['dataMin', 'dataMax'] : undefined }
-            tickFormatter={value => Number(value.toFixed(1))}
+            tickFormatter={value => Number(value.toFixed(2))}
+            tick={{ fontSize: 12 }}
           />
           <Tooltip
             labelFormatter={ms => new Date(ms).toLocaleString('ja-JP', {
