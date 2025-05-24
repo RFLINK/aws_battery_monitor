@@ -82,8 +82,19 @@ def lambda_handler(event, context):
 
     # 5) レスポンス: JSON or CSV
     if fmt == 'csv':
+
+        # JST タイムゾーン定義
+        jst = datetime.timezone(datetime.timedelta(hours=9))
+        # start/end を JST の datetime に変換
+        start_dt = datetime.datetime.fromtimestamp(start*180,   tz=jst)
+        end_dt   = datetime.datetime.fromtimestamp(end*180+60*2,tz=jst)
+        # 好みのフォーマットに整形（例: 20250525_142300 の形式）
+        start_str = start_dt.strftime('%Y%m%d_%H%M')
+        end_str   = end_dt.strftime('%Y%m%d_%H%M')
+        # ファイル名
+        filename = f"{device_id}_{start_str}_{end_str}.csv"
+
         csv_body = _to_csv(clean)
-        filename = f"{device_id}_{start}_{end}.csv"
         print(f"[RESPONSE] CSV, filename={filename}")
         return {
             'statusCode': 200,
