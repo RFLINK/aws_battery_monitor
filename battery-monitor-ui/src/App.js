@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, FileText, Trash2, Settings } from 'lucide-react';
+import { Search, FileText, Trash2, Settings, Loader } from 'lucide-react';
 import DeviceSelector from './components/DeviceSelector';
 import DateRangePicker from './components/DateRangePicker';
 import './App.css';
@@ -257,7 +257,7 @@ console.log('🔧 Settings:', Settings);
               <span className="modal-close" onClick={() => setShowSettings(false)}>✕</span>
               <h3>デバイス {device} の sequence=0 情報</h3>
               {loadingSettings ? (
-                <p>読み込み中…</p>
+                <div className="loading-overlay"><Loader size={48} className="spinner" /></div>
               ) : settingsData ? (
                <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
                  {/* ① db_update_time を JST に変換して表示 */}
@@ -317,7 +317,7 @@ console.log('🔧 Settings:', Settings);
       )}      
      {/* ここでテーブルを表示するかのスイッチを追加 */}
       {loading
-        ? <div>Loading…</div>
+        ? <div className="loading-overlay"><Loader size={48} className="spinner" /></div>
         : <><DataChart items={data} />{ showTable && <DataTable items={data} /> }</>
       }
     </div>

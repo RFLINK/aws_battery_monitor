@@ -198,3 +198,25 @@
   box-sizing: border-box;
   /* 必要なら色やボーダーもここで統一 */
 }
+
+/* 回転アニメーション定義 */
+@keyframes spin {
+  from   { transform: rotate(0deg); }
+  to     { transform: rotate(360deg); }
+}
+
+/* アイコンに spin をかける */
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* オーバーレイで画面中央に固定表示 */
+.loading-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,0.6);
+  z-index: 20000;
+}

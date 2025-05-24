@@ -98,7 +98,7 @@ export default function DataChart({ items }) {
             tick={{ fontSize: 12 }}
           />
           <YAxis 
-            domain={ !showTemp ? ['dataMin', 'dataMax'] : undefined }
+            domain={ (!showTemp || !showVoltage) ? ['dataMin', 'dataMax'] : undefined }
             tickFormatter={value => Number(value.toFixed(2))}
             tick={{ fontSize: 12 }}
           />
