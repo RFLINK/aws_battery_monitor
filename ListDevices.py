@@ -1,25 +1,31 @@
 # ListDevices.py
 import json
 import boto3
+from boto3.dynamodb.conditions import Attr
 
 dynamodb = boto3.resource('dynamodb')
 table    = dynamodb.Table('MessageBuffer')
 
 def lambda_handler(event, context):
-    # Scan ‚ğƒy[ƒWƒl[ƒVƒ‡ƒ“‘Î‰‚Å‘SŒæ“¾
+    # Scan ã®ãƒ‘ãƒ©ãƒ¡ãƒ¼ã‚¿ã‚’ã¾ã¨ã‚ã¦ãŠã
+    scan_params = {
+        'ProjectionExpression': 'device_id',
+        'FilterExpression': Attr('sequence_number').gte(1)  # ã“ã“ã§ã‚·ãƒ¼ã‚±ãƒ³ã‚¹ç•ªå· â‰¥ 1 ã®ã‚‚ã®ã ã‘ã‚’é€šã™
+    }
+
+    # Scan ã‚’ãƒšãƒ¼ã‚¸ãƒãƒ¼ã‚·ãƒ§ãƒ³å¯¾å¿œã§å…¨ä»¶å–å¾—
     items = []
-    resp = table.scan(ProjectionExpression='device_id')
+    resp = table.scan(**scan_params)
     items.extend(resp.get('Items', []))
 
-    # LastEvaluatedKey ‚ª‚ ‚éŒÀ‚è‘±‚¯‚é
     while 'LastEvaluatedKey' in resp:
         resp = table.scan(
-            ProjectionExpression='device_id',
-            ExclusiveStartKey=resp['LastEvaluatedKey']
+            ExclusiveStartKey=resp['LastEvaluatedKey'],
+            **scan_params
         )
         items.extend(resp.get('Items', []))
 
-    # d•¡”rœ•ƒ\[ƒg
+    # é‡è¤‡æ’é™¤ï¼†ã‚½ãƒ¼ãƒˆ
     ids = sorted({ item['device_id'] for item in items })
 
     return {

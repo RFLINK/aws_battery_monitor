@@ -4,9 +4,12 @@ from decimal import Decimal
 import boto3
 from boto3.dynamodb.conditions import Key
 import datetime
+import time
 
 # 環境変数にテーブル名を設定
 TABLE_NAME = os.environ.get('TABLE_NAME', 'MessageBuffer')
+IOT_REGION = 'ap-northeast-1'
+iot = boto3.client('iot-data', region_name=IOT_REGION)
 
 # DynamoDB リソース初期化
 dynamodb = boto3.resource('dynamodb')
@@ -106,6 +109,46 @@ def lambda_handler(event, context):
         }
 
     print(f"[RESPONSE] JSON, count={len(clean)}")
+
+    # 8) 追加：DB 参照用 device_id をペイロードに、seq=0 でパブリッシュ
+    try:
+        # 「device_id」で降順クエリ、最新1件を取る
+        latest = table.query(
+            KeyConditionExpression=Key('device_id').eq(device_id),
+            ScanIndexForward=False,  # 降順
+            Limit=1
+        ).get('Items', [])
+
+        if latest:
+            latest_gw = latest[0].get('gateway_id')
+            print(f"[INFO] Latest gateway_id for {device_id}: {latest_gw}")
+        else:
+            latest_gw = None
+            print(f"[WARN] No items found for {device_id}, gateway_id 未設定")
+
+        # トピックは latest_gw を使い、payload は device_id + seq=0
+        custom_payload = {
+            'destination': 'gateway',
+            'gateway_id': latest_gw,
+            'device_id': device_id,    # DBキーとして使っている ID
+            'sequence_number': 0,      # 固定で 0 番
+            'timestamp': int(time.time()),
+            'status': 'ack'
+        }
+        topic = f"battery-monitor/{latest_gw}/down/ack"
+        iot.publish(
+            topic=topic,
+            qos=0,
+            payload=json.dumps(custom_payload)
+        )
+        print(f"[PUBLISH] Custom publish to {topic}: {custom_payload}")
+    except ClientError as e:
+        # ClientError を潰してログだけ残す
+        err = e.response.get('Error', {})
+        print(f"[WARN] Custom publish failed – Code={err.get('Code')}, Message={err.get('message') or err.get('Message')}")
+    except Exception as e:
+        print(f"[WARN] Custom publish unexpected error: {e}")
+
     return _resp(200, clean)
 
 
@@ -141,6 +184,22 @@ def _to_csv(items):
 
     return '\n'.join(lines)
 
+def _send_ack(gateway_id, device_id, seq):
+    ack_ts = int(time.time())
+    topic  = f"battery-monitor/{gateway_id}/down/ack"
+    payload = {
+        'destination'    : 'gateway',
+        'gateway_id'     : gateway_id,
+        'device_id'      : device_id,
+        'sequence_number': seq,
+        'timestamp'      : ack_ts,
+        'status'         : 'ack'
+    }
+    try:
+        iot.publish(topic=topic, qos=0, payload=json.dumps(payload))
+        print(f"[ACK] Published: {payload}")
+    except ClientError as exc:
+        print(f"[ERROR] publish ACK failed: {exc.response['Error']['Message']}")
 
 def _resp(code, body):
     return {
