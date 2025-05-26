@@ -50,8 +50,7 @@ export default function DataChart({ items }) {
   const times = chartData.map(d => d.timestamp);
   if (times.length === 0) return null;
   const minTs = Math.min(...times), maxTs = Math.max(...times);
-  const isSingleDay =
-    new Date(minTs).toDateString() === new Date(maxTs).toDateString();
+  const isWithin24h = (maxTs - minTs) <= 24 * 60 * 60 * 1000;
   const midnightTicks = [];
   const d = new Date(minTs); d.setHours(0,0,0,0);
   if (d.getTime() < minTs) d.setDate(d.getDate()+1);
@@ -92,15 +91,17 @@ export default function DataChart({ items }) {
             scale="time"
             domain={[minTs, maxTs]}
             // ② 同一日なら時刻表示、跨いでたら日付表示
-            ticks={!isSingleDay ? midnightTicks : undefined}
+            ticks={!isWithin24h ? midnightTicks : undefined}
             tickFormatter={ms => {
-              if (isSingleDay) {
+              if (isWithin24h) {
+                // 範囲が24時間以内 → 時刻だけ表示
                 return new Date(ms).toLocaleTimeString('ja-JP', {
                   hour: '2-digit', minute: '2-digit'
                 });
               } else {
+                // 24時間超 → 日付表示
                 return new Date(ms).toLocaleDateString('ja-JP', {
-                  year: '2-digit', month: '2-digit', day: '2-digit',
+                  year: '2-digit', month: '2-digit', day: '2-digit'
                 });
               }
             }}
