@@ -310,7 +310,10 @@ console.log('🔧 Settings:', Settings);
             <h2>削除完了</h2>
             <p>{resultCount} 件削除。</p>
             <div className="modal-actions">
-              <button onClick={() => setShowResultModal(false)}>OK</button>
+              <button onClick={() => {
+                setShowResultModal(false);
+                window.location.reload();
+              }}>OK</button>
             </div>
           </div>
         </div>

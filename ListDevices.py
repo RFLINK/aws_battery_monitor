@@ -10,7 +10,7 @@ def lambda_handler(event, context):
     # Scan のパラメータをまとめておく
     scan_params = {
         'ProjectionExpression': 'device_id',
-        'FilterExpression': Attr('sequence_number').gte(1)  # ここでシーケンス番号 ≥ 1 のものだけを通す
+        'FilterExpression': Attr('sequence_number').gte(1)  # ここでシーケンス番号 1 以上のものだけを通す
     }
 
     # Scan をページネーション対応で全件取得
