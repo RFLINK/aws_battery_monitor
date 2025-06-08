@@ -10,7 +10,7 @@ def lambda_handler(event, context):
     # Scan のパラメータをまとめておく
     scan_params = {
         'ProjectionExpression': 'device_id',
-        'FilterExpression': Attr('sequence_number').gte(1)  # ここでシーケンス番号 1 以上のものだけを通す
+        'FilterExpression': Attr('sequence_number').gte(1)  # ここでシーケンス番号 ≥ 1 のものだけを通す
     }
 
     # Scan をページネーション対応で全件取得
@@ -25,8 +25,11 @@ def lambda_handler(event, context):
         )
         items.extend(resp.get('Items', []))
 
-    # 重複排除＆ソート
-    ids = sorted({ item['device_id'] for item in items })
+    # 重複排除＆ソート（Length→ASCII）
+    ids = sorted(
+        { str(item['device_id']) for item in items },   # device_id を文字列として扱う
+        key=lambda s: (len(s), s)
+    )
 
     return {
         'statusCode': 200,
