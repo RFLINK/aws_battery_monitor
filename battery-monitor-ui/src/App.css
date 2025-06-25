@@ -220,3 +220,28 @@
   background: rgba(255,255,255,0.6);
   z-index: 20000;
 }
+
+/* 通常レイアウト：グラフ＋テーブルはそのまま縦並び */
+.layout--normal {
+  display: block;
+}
+
+/* 分離レイアウト：グリッドで上下２エリアに */
+.layout--separate {
+  display: grid;
+  grid-template-rows: auto 1fr;   /* 上：グラフの高さ、下：テーブル部が残り */
+  height: calc(100vh - 160px);    /* ページ全高 ? ヘッダー／ツールバー分（要調整） */
+}
+
+/* テーブル部だけスクロール */
+.layout--separate .table {
+  overflow-y: auto;
+}
+
+/* テーブルヘッダーを固定 */
+.layout--separate .table thead th {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+}

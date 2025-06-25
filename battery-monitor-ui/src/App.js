@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, FileText, Trash2, Settings, Loader } from 'lucide-react';
+import { Search, FileText, Trash2, Settings, Loader, Pin, PinOff } from 'lucide-react';
 import DeviceSelector from './components/DeviceSelector';
 import DateRangePicker from './components/DateRangePicker';
 import './App.css';
@@ -18,6 +18,15 @@ const setShowTableCookie = (val) => {
   document.cookie = `showTable=${val}; path=/; max-age=${60*60*24*365}`;
 };
 
+const getPinnedCookie = () => {
+  const m = document.cookie.match(/(?:^|;\s*)pinnedGraph=([^;]+)/);
+  return m ? m[1] === 'true' : false;
+};
+const setPinnedCookie = (val) => {
+  document.cookie = `pinnedGraph=${val}; path=/; max-age=${60*60*24*365}`;
+};
+
+
 export default function App() {
   const [device, setDevice] = useState('');
   const [start, setStart]   = useState(new Date(Date.now() - 3600*24*3*1000));
@@ -26,7 +35,8 @@ export default function App() {
   const [manualEnd, setManualEnd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showTable, setShowTable] = useState(() => getShowTableCookie());
-
+  const [pinnedGraph, setPinnedGraph] = useState(() => getPinnedCookie());
+  
   // 削除モーダル用ステート
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteInput, setDeleteInput]         = useState('');
@@ -35,7 +45,7 @@ export default function App() {
   const [showResultModal, setShowResultModal] = useState(false);
   const [resultCount, setResultCount]         = useState(0);
 
-console.log('🔧 Settings:', Settings);
+  console.log('🔧 Settings:', Settings);
 
   // デバイス選択時に自動検索
   useEffect(() => {
@@ -64,7 +74,10 @@ console.log('🔧 Settings:', Settings);
   useEffect(() => {
     setShowTableCookie(showTable);
   }, [showTable]);
-
+  useEffect(() => {
+    setPinnedCookie(pinnedGraph);
+  }, [pinnedGraph]);
+  
   //設定ボタンモーダル
   const [showSettings, setShowSettings] = useState(false);
   const [settingsData, setSettingsData] = useState(null);
@@ -251,6 +264,21 @@ console.log('🔧 Settings:', Settings);
         >
           <Settings size={20} />
         </button>
+        
+
+        {/* ─── 追加：ピンアイコンでレイアウト切替 ─── */}
+        <button
+          className="toolbar-button"
+          onClick={() => setPinnedGraph(prev => !prev)}
+          title={
+            pinnedGraph
+              ? 'アンピンして通常レイアウトに戻す'
+              : 'ピンしてテーブルをスクロール'
+          }
+        >
+          {pinnedGraph ? <Pin size={20} /> : <PinOff size={20} />}
+        </button>
+        
         {showSettings && (
           <div className="modal-backdrop" onClick={() => setShowSettings(false)}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -317,12 +345,25 @@ console.log('🔧 Settings:', Settings);
             </div>
           </div>
         </div>
-      )}      
-     {/* ここでテーブルを表示するかのスイッチを追加 */}
-      {loading
-        ? <div className="loading-overlay"><Loader size={48} className="spinner" /></div>
-        : <><DataChart items={data} />{ showTable && <DataTable items={data} /> }</>
-      }
+      )} 
+           
+      {/* ここでテーブルを表示するかのスイッチを追加 */}
+      {loading ? (
+        <div className="loading-overlay">
+          <Loader size={48} className="spinner" />
+        </div>
+      ) : (
+        <div className={pinnedGraph ? 'layout--separate' : 'layout--normal'}>
+          <div className="graph">
+            <DataChart items={data} />
+          </div>
+          {showTable && (
+            <div className="table">
+              <DataTable items={data} />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
