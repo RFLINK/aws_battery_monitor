@@ -100,7 +100,10 @@ export default function DataTable({ items }) {
             {visibleRows.map(row => {
               const isStart = sortAsc ? row.groupIndex === 0 : row.groupIndex === row.groupSize - 1;
               return (
-                <tr key={`${row.timeMs}-${row.groupIndex}`}>                  
+                <tr 
+                  key={`${row.timeMs}-${row.groupIndex}`}
+                  id={`row-${row.timeMs}`}
+                >
                   <td style={tdRight}>{row.time}</td>
                   {isStart && <td style={tdRight} rowSpan={row.groupSize}>{row.gateway_id}</td>}
                   {isStart && <td style={tdRight} rowSpan={row.groupSize}>{row.rssi}</td>}

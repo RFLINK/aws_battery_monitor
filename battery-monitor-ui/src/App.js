@@ -204,6 +204,19 @@ export default function App() {
     }
   };
 
+  // ─── 追加：チャートクリック時に呼ばれるハンドラ ───
+  const handleChartClick = (datum, idx) => {
+    console.log('clicked datum, idx:', datum, idx);
+    setShowTable(true);
+    // DataTable の <tr id> は row-<timeMs>、datum.timestamp と同じ値なのでこちらを使います
+    const key = datum.timestamp;
+    const row = document.getElementById(`row-${key}`);
+    console.log('scroll to id=', `row-${key}`, 'found?', !!row);
+    if (row) {
+      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  };
+  
   return (
     <div style={{ padding: 20 }}>
       <h1 style={{ display: 'flex', alignItems: 'center', margin: 0 }}>
@@ -355,7 +368,7 @@ export default function App() {
       ) : (
         <div className={pinnedGraph ? 'layout--separate' : 'layout--normal'}>
           <div className="graph">
-            <DataChart items={data} />
+            <DataChart items={data} onPointClick={handleChartClick}/>
           </div>
           {showTable && (
             <div className="table">

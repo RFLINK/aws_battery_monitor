@@ -27,10 +27,25 @@ const setShowVoltageCookie = (val) => {
   document.cookie = `showVoltage=${val}; path=/; max-age=${60*60*24*365}`;
 };
 
-export default function DataChart({ items }) {
+export default function DataChart({ items, onPointClick }) {
   // ① トグル用 state
   const [showTemp, setShowTemp]       = useState(getShowTempCookie());
   const [showVoltage, setShowVoltage] = useState(getShowVoltageCookie());
+
+  // ─── クリック時に Recharts が渡す props からデータ点を取得 ───
+  const handleChartClick = chartProps => {
+    // (オプション) 中身確認用
+    // console.log('[DataChart] chartProps:', chartProps);
+
+    // activePayload[0].payload に、該当ポイントの {timestamp, temperature, avgVoltage} が入っている
+    const payload = chartProps.activePayload?.[0]?.payload;
+    // activeTooltipIndex にそのポイントの配列インデックスが入っている
+    const idx = chartProps.activeTooltipIndex;
+
+    if (payload && typeof idx === 'number') {
+      onPointClick(payload, idx);
+    }
+  };
 
   // ② 元の chartData 作成ロジックはそのまま
   const chartData = items.flatMap(item => {
@@ -77,12 +92,15 @@ export default function DataChart({ items }) {
   ];
 
   return (
-    <div style={{ width: '99%', height: 350, marginBottom: 8 }}>
+    <div 
+      style={{ width: '99%', height: 350, marginBottom: 8 }}
+    >
       {/* ④ チェックボックス */}
       <ResponsiveContainer>
         <LineChart
           data={chartData}
           margin={{ top: 0, right: 16, left: -20, bottom: 8 }}
+          onClick={handleChartClick}
         >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis
