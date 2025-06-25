@@ -35,6 +35,7 @@ export default function App() {
   const [manualEnd, setManualEnd] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showTable, setShowTable] = useState(() => getShowTableCookie());
+  const [showAllRows, setShowAllRows]   = useState(false);
   const [pinnedGraph, setPinnedGraph] = useState(() => getPinnedCookie());
   
   // 削除モーダル用ステート
@@ -208,13 +209,16 @@ export default function App() {
   const handleChartClick = (datum, idx) => {
     console.log('clicked datum, idx:', datum, idx);
     setShowTable(true);
-    // DataTable の <tr id> は row-<timeMs>、datum.timestamp と同じ値なのでこちらを使います
-    const key = datum.timestamp;
-    const row = document.getElementById(`row-${key}`);
-    console.log('scroll to id=', `row-${key}`, 'found?', !!row);
-    if (row) {
-      row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    setShowAllRows(true);   // ← 全件表示をONに
+    setTimeout(() => {
+      // DataTable の <tr id> は row-<timeMs>、datum.timestamp と同じ値なのでこちらを使います
+      const key = datum.timestamp;
+      const row = document.getElementById(`row-${key}`);
+      console.log('scroll to id=', `row-${key}`, 'found?', !!row);
+      if (row) {
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 0);
   };
   
   return (
@@ -372,7 +376,7 @@ export default function App() {
           </div>
           {showTable && (
             <div className="table">
-              <DataTable items={data} />
+              <DataTable items={data} showAll={showAllRows} />
             </div>
           )}
         </div>
