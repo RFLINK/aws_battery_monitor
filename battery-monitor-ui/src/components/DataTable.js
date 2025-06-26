@@ -17,11 +17,11 @@ export default function DataTable({ items, showAll = false }) {
   const initialAsc = getSortCookie() === 'desc' ? false : true;
   const [sortAsc, setSortAsc] = useState(initialAsc);
 
-  // 全件表示 control
+  // 全件表示制御 state
   const [internalShowAll, setInternalShowAll] = useState(showAll);
   useEffect(() => {
     if (showAll) setInternalShowAll(true);
-  }, [showAll, sortAsc]);
+  }, [showAll]);
 
   // 行データを生成
   const rows = useMemo(() => {
@@ -38,19 +38,21 @@ export default function DataTable({ items, showAll = false }) {
           year: 'numeric', month: '2-digit', day: '2-digit',
           hour: '2-digit', minute: '2-digit'
         });
-        return { gateway_id, rssi, temperature, time, timeMs, voltages: chunk, groupSize, groupIndex: minuteOffset, avgVoltage };
+        return { gateway_id, rssi, temperature, time, timeMs, avgVoltage, voltages: chunk, groupSize, groupIndex: minuteOffset };
       });
     });
   }, [items]);
 
   // ソート済み行
   const sortedRows = useMemo(() => {
-    return [...rows].sort((a, b) => sortAsc ? a.timeMs - b.timeMs : b.timeMs - a.timeMs);
+    return [...rows].sort((a, b) => (sortAsc ? a.timeMs - b.timeMs : b.timeMs - a.timeMs));
   }, [rows, sortAsc]);
 
-  // visibleRows
-  const minTime = useMemo(() => rows.length ? Math.min(...rows.map(r => r.timeMs)) : 0, [rows]);
-  const maxTime = useMemo(() => rows.length ? Math.max(...rows.map(r => r.timeMs)) : 0, [rows]);
+  // 昇順用/降順用の境界時刻
+  const minTime = useMemo(() => (rows.length ? Math.min(...rows.map(r => r.timeMs)) : 0), [rows]);
+  const maxTime = useMemo(() => (rows.length ? Math.max(...rows.map(r => r.timeMs)) : 0), [rows]);
+
+  // 表示行の切り出し
   const visibleRows = useMemo(() => {
     if (internalShowAll) return sortedRows;
     if (!sortedRows.length) return [];
@@ -72,10 +74,17 @@ export default function DataTable({ items, showAll = false }) {
     setInternalShowAll(false);
   };
 
+  // スタイル
+  const containerStyle = { width: '1230px', overflowX: 'auto', paddingRight: '30px' };
+  const thBase = { border: '1px solid #ccc', padding: '4px', background: '#f0f0f0', userSelect: 'none', textAlign: 'center' };
+  const thSortable = { ...thBase, cursor: 'pointer' };
+  const thNormal = { ...thBase, cursor: 'default' };
+  const tdRight = { border: '1px solid #ccc', padding: '4px', textAlign: 'center', whiteSpace: 'nowrap' };
+
   return (
-    <div className="dt-container">
-      {/* ヘッダー用テーブル */}
-      <table className="dt-header" style={{ tableLayout: 'fixed', width: '100%' }}>
+    <div>
+      <div style={containerStyle}>
+        <table style={{ width: '1230px', borderCollapse: 'collapse' }}>
         <colgroup>
           <col style={{ width: '150px' }} />
           <col style={{ width: '60px' }} />
@@ -86,51 +95,29 @@ export default function DataTable({ items, showAll = false }) {
         </colgroup>
         <thead>
           <tr>
-            <th onClick={onToggleSort} style={{ cursor: 'pointer' }}>
+              <th style={thSortable} onClick={onToggleSort}>
               time (JST) {sortAsc ? '▲' : '▼'}
             </th>
-            <th>gw</th>
-            <th>rssi</th>
-            <th>temp.</th>
-            <th>avgV.</th>
-            <th>voltages (20点／分)</th>
+              <th style={thNormal}>gw</th>
+              <th style={thNormal}>rssi</th>
+              <th style={thNormal}>temp.</th>
+              <th style={thNormal}>avgV.</th>
+              <th style={thNormal}>voltages (20点／分)</th>
           </tr>
         </thead>
-      </table>
-
-      {/* データ部用スクロール */}
-      <div className="dt-body" style={{ overflowY: 'auto', maxHeight: 'calc(100vh - 400px)' }}>
-        <table className="dt-data" style={{ tableLayout: 'fixed', width: '100%' }}>
-          <colgroup>
-            <col style={{ width: '150px' }} />
-            <col style={{ width: '60px' }} />
-            <col style={{ width: '60px' }} />
-            <col style={{ width: '60px' }} />
-            <col style={{ width: '60px' }} />
-            <col />
-          </colgroup>
           <tbody>
             {visibleRows.map(row => {
               const isStart = sortAsc ? row.groupIndex === 0 : row.groupIndex === row.groupSize - 1;
               return (
-                <tr 
-                  key={`${row.timeMs}-${row.groupIndex}`} 
-                  id={`row-${row.timeMs}`}
-                >
-                  <td style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                    {row.time}
-                  </td>
-                  {isStart && <td style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center' }} rowSpan={row.groupSize}>{row.gateway_id}</td>}
-                  {isStart && <td style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center' }} rowSpan={row.groupSize}>{row.rssi}</td>}
-                  {isStart && <td style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center' }} rowSpan={row.groupSize}>{row.temperature}</td>}
-                  <td style={{ border: '1px solid #ccc', padding: '4px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                    {row.avgVoltage.toFixed(2)}
-                  </td>
+                <tr key={`${row.timeMs}-${row.groupIndex}`} id={`row-${row.timeMs}`}>
+                  <td style={tdRight}>{row.time}</td>
+                  {isStart && <td style={tdRight} rowSpan={row.groupSize}>{row.gateway_id}</td>}
+                  {isStart && <td style={tdRight} rowSpan={row.groupSize}>{row.rssi}</td>}
+                  {isStart && <td style={tdRight} rowSpan={row.groupSize}>{row.temperature}</td>}
+                  <td style={tdRight}>{row.avgVoltage.toFixed(2)}</td>
                   <td style={{ border: '1px solid #ccc', padding: '4px', overflowX: 'auto' }}>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(20, 1fr)', gap: '2px', fontSize: '0.9rem', whiteSpace: 'nowrap', paddingRight: '16px' }}>
-                      {row.voltages.map((v, i) => (
-                        <div key={i} style={{ textAlign: 'right' }}>{v.toFixed(2)}</div>
-                      ))}
+                      {row.voltages.map((v, i) => <div key={i} style={{ textAlign: 'right' }}>{v.toFixed(2)}</div>)}
                     </div>
                   </td>
                 </tr>
@@ -139,6 +126,11 @@ export default function DataTable({ items, showAll = false }) {
           </tbody>
         </table>
       </div>
+      {!internalShowAll && visibleRows.length < sortedRows.length && (
+        <div style={{ textAlign: 'center', margin: '8px 0' }}>
+          <button onClick={() => setInternalShowAll(true)}>全て表示</button>
+        </div>
+      )}
     </div>
   );
 }
