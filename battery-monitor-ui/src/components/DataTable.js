@@ -75,7 +75,7 @@ export default function DataTable({ items, showAll = false }) {
   };
 
   // スタイル
-  const containerStyle = { width: '1230px', overflowX: 'auto', paddingRight: '30px' };
+  const containerStyle = { overflowX: 'auto' };
   const thBase = { border: '1px solid #ccc', padding: '4px', background: '#f0f0f0', userSelect: 'none', textAlign: 'center' };
   const thSortable = { ...thBase, cursor: 'pointer' };
   const thNormal = { ...thBase, cursor: 'default' };
@@ -85,7 +85,7 @@ export default function DataTable({ items, showAll = false }) {
     <div>
       <div style={containerStyle}>
         <table 
-          style={{ width: '1230px', tableLayout: 'fixed', borderCollapse: 'collapse' }}
+          style={{ width: '1310px', tableLayout: 'fixed', borderCollapse: 'collapse' }}
         >
         <colgroup>
           <col style={{ width: '150px' }} />
