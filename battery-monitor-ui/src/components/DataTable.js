@@ -84,7 +84,9 @@ export default function DataTable({ items, showAll = false }) {
   return (
     <div>
       <div style={containerStyle}>
-        <table style={{ width: '1230px', borderCollapse: 'collapse' }}>
+        <table 
+          style={{ width: '1230px', tableLayout: 'fixed', borderCollapse: 'collapse' }}
+        >
         <colgroup>
           <col style={{ width: '150px' }} />
           <col style={{ width: '60px' }} />
