@@ -93,7 +93,7 @@ export default function DataChart({ items, onPointClick }) {
 
   return (
     <div 
-      style={{ width: '99%', height: 200, marginBottom: 8 }}
+      style={{ width: '99%', height: 200, marginBottom: 0 }}
     >
       {/* ④ チェックボックス */}
       <ResponsiveContainer>

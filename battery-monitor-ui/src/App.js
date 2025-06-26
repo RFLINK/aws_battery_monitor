@@ -222,7 +222,7 @@ export default function App() {
   };
   
   return (
-    <div style={{ padding: 20 }}>
+    <div style={{ padding: '20px 20px 0 20px' }}>
       <h1 style={{ display: 'flex', alignItems: 'center', margin: 0 }}>
         <img src={batteryIcon} alt="Battery Icon" style={{ width: 32, height: 32, marginRight: 8 }} />
         Battery Monitor

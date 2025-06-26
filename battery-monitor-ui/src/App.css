@@ -245,3 +245,32 @@
   background: #fff;
   z-index: 1;
 }
+
+/* ── DataTable 固定ヘッダー＆ボーダーライン復活 ── */
+.dt-header,
+.dt-data {
+  width: 100%;
+  table-layout: fixed;     /* colgroup の幅を有効化 */
+  border-collapse: collapse;
+}
+
+.dt-header th,
+.dt-data td {
+  border: 1px solid #ccc;  /* 元の細いグレー線 */
+  padding: 4px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.dt-header th {
+  background: #f0f0f0;     /* 元のヘッダー背景色 */
+  cursor: pointer;
+  position: sticky;        /* ヘッダーを固定 */
+  top: 0;
+  z-index: 2;
+}
+
+/* スクロール時に行がヘッダーの下に収まるように余白を確保 */
+.dt-body tr {
+  scroll-margin-top: 40px;  /* ヘッダーの高さ＋border分に合わせて調整 */
+}
