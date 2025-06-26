@@ -85,28 +85,30 @@ export default function DataTable({ items, showAll = false }) {
     <div>
       <div style={containerStyle}>
         <table 
-          style={{ width: '1310px', tableLayout: 'fixed', borderCollapse: 'collapse' }}
+          style={{ width: '1300px', tableLayout: 'fixed', borderCollapse: 'collapse' }}
         >
-        <colgroup>
-          <col style={{ width: '150px' }} />
-          <col style={{ width: '60px' }} />
-          <col style={{ width: '60px' }} />
-          <col style={{ width: '60px' }} />
-          <col style={{ width: '60px' }} />
-          <col />
-        </colgroup>
-        <thead>
-          <tr>
-              <th style={thSortable} onClick={onToggleSort}>
-              time (JST) {sortAsc ? '▲' : '▼'}
-            </th>
-              <th style={thNormal}>gw</th>
-              <th style={thNormal}>rssi</th>
-              <th style={thNormal}>temp.</th>
-              <th style={thNormal}>avgV.</th>
-              <th style={thNormal}>voltages (20点／分)</th>
-          </tr>
-        </thead>
+          <colgroup>
+            <col style={{ width: '150px' }} />
+            <col style={{ width: '60px' }} />
+            <col style={{ width: '60px' }} />
+            <col style={{ width: '60px' }} />
+            <col style={{ width: '60px' }} />
+            <col />
+          </colgroup>
+          {visibleRows.length > 0 && (
+            <thead>
+              <tr>
+                  <th style={thSortable} onClick={onToggleSort}>
+                  time (JST) {sortAsc ? '▲' : '▼'}
+                </th>
+                  <th style={thNormal}>gw</th>
+                  <th style={thNormal}>rssi</th>
+                  <th style={thNormal}>temp.</th>
+                  <th style={thNormal}>avgV.</th>
+                  <th style={thNormal}>voltages (20点／分)</th>
+              </tr>
+            </thead>
+          )}
           <tbody>
             {visibleRows.map(row => {
               const isStart = sortAsc ? row.groupIndex === 0 : row.groupIndex === row.groupSize - 1;
