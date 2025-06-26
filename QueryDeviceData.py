@@ -15,7 +15,6 @@ iot = boto3.client('iot-data', region_name=IOT_REGION)
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(TABLE_NAME)
 
-
 def lambda_handler(event, context):
     print("[EVENT]", json.dumps(event, ensure_ascii=False))
 
@@ -26,6 +25,17 @@ def lambda_handler(event, context):
     start     = params.get('start')
     end       = params.get('end')
     fmt       = params.get('format', 'json').lower()
+
+    # 認証チェック
+    VALID_ID = os.environ.get('VALID_ID', 'admin')
+    VALID_PASS = os.environ.get('VALID_PASSWORD', 'password')
+
+    user_id = params.get('id')
+    password = params.get('password')
+
+    if user_id != VALID_ID or password != VALID_PASS:
+        print(f"[AUTH] Invalid credentials: id={user_id}, password={password}")
+        return _resp(401, {'error': '認証失敗'})
 
     # バリデーション
     if not device_id or not start or not end:
@@ -83,6 +93,13 @@ def lambda_handler(event, context):
     clean = [{k: _dec(v) for k, v in it.items()} for it in filtered]
     print(f"[PREP] Cleaned items count={len(clean)}")
 
+    # ───────────────────────────────────────
+    # 4.5) 電圧値サニタイズ：Web/CSV 出力用にのみ適用
+    clean, corrections = _sanitize_voltages(clean)
+    if corrections > 0:
+        print(f"[PREP] Voltages sanitized: {corrections} values >=100V replaced")
+    # ───────────────────────────────────────
+
     # 5) レスポンス: JSON or CSV
     if fmt == 'csv':
 
@@ -111,43 +128,7 @@ def lambda_handler(event, context):
     print(f"[RESPONSE] JSON, count={len(clean)}")
 
     # 8) 追加：DB 参照用 device_id をペイロードに、seq=0 でパブリッシュ
-    try:
-        # 「device_id」で降順クエリ、最新1件を取る
-        latest = table.query(
-            KeyConditionExpression=Key('device_id').eq(device_id),
-            ScanIndexForward=False,  # 降順
-            Limit=1
-        ).get('Items', [])
-
-        if latest:
-            latest_gw = latest[0].get('gateway_id')
-            print(f"[INFO] Latest gateway_id for {device_id}: {latest_gw}")
-        else:
-            latest_gw = None
-            print(f"[WARN] No items found for {device_id}, gateway_id 未設定")
-
-        # トピックは latest_gw を使い、payload は device_id + seq=0
-        custom_payload = {
-            'destination': 'gateway',
-            'gateway_id': latest_gw,
-            'device_id': device_id,    # DBキーとして使っている ID
-            'sequence_number': 0,      # 固定で 0 番
-            'timestamp': int(time.time()),
-            'status': 'ack'
-        }
-        topic = f"battery-monitor/{latest_gw}/down/ack"
-        iot.publish(
-            topic=topic,
-            qos=0,
-            payload=json.dumps(custom_payload)
-        )
-        print(f"[PUBLISH] Custom publish to {topic}: {custom_payload}")
-    except ClientError as e:
-        # ClientError を潰してログだけ残す
-        err = e.response.get('Error', {})
-        print(f"[WARN] Custom publish failed – Code={err.get('Code')}, Message={err.get('message') or err.get('Message')}")
-    except Exception as e:
-        print(f"[WARN] Custom publish unexpected error: {e}")
+    _send_ack(device_id, seq=0)
 
     return _resp(200, clean)
 
@@ -184,22 +165,39 @@ def _to_csv(items):
 
     return '\n'.join(lines)
 
-def _send_ack(gateway_id, device_id, seq):
-    ack_ts = int(time.time())
-    topic  = f"battery-monitor/{gateway_id}/down/ack"
-    payload = {
+def _send_ack(device_id, seq):
+    import boto3
+    lambda_client = boto3.client('lambda', region_name=IOT_REGION)    
+    # 1) 最新レコードを降順クエリで取得
+    try:
+        resp = table.query(
+            KeyConditionExpression=Key('device_id').eq(device_id),
+            ScanIndexForward=False,  # 降順取得
+            Limit=1
+        )
+        items = resp.get('Items', [])
+        latest_gw = items[0].get('gateway_id') if items else None
+    except Exception as e:
+        print(f"[ERROR] 最新 gateway_id の取得に失敗: {e}")
+        latest_gw = None
+
+    # 2) ペイロード & トピック組み立て
+    custom_payload = {
         'destination'    : 'gateway',
-        'gateway_id'     : gateway_id,
+        'gateway_id'     : latest_gw,
         'device_id'      : device_id,
         'sequence_number': seq,
-        'timestamp'      : ack_ts,
+        'timestamp'      : int(time.time()),
         'status'         : 'ack'
     }
+    topic = f"battery-monitor/{latest_gw}/down/ack"
+
+    # 3) パブリッシュ
     try:
-        iot.publish(topic=topic, qos=0, payload=json.dumps(payload))
-        print(f"[ACK] Published: {payload}")
-    except ClientError as exc:
-        print(f"[ERROR] publish ACK failed: {exc.response['Error']['Message']}")
+        iot.publish(topic=topic, qos=0, payload=json.dumps(custom_payload))
+        print(f"[ACK] Published to {topic}: {custom_payload}")
+    except Exception as e:
+        print(f"[WARN] ACK publish failed: {e}")
 
 def _resp(code, body):
     return {
@@ -207,3 +205,20 @@ def _resp(code, body):
         'headers': {'Content-Type': 'application/json'},
         'body': json.dumps(body, ensure_ascii=False)
     }
+
+# 追加：サニタイズ関数
+def _sanitize_voltages(items):
+    total_corrections = 0
+    for item in items:
+        vs = item.get('voltages', [])
+        # 先に最初の正常値を探す（なければ0をデフォルトに）
+        first_valid = next((x for x in vs if isinstance(x, (int, float)) and x < 110), 0)
+        prev = first_valid
+
+        for i, v in enumerate(vs):
+            if isinstance(v, (int, float)) and v >= 100:
+                vs[i] = prev
+                total_corrections += 1
+            else:
+                prev = v
+    return items, total_corrections

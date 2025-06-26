@@ -37,6 +37,11 @@ export default function App() {
   const [showTable, setShowTable] = useState(() => getShowTableCookie());
   const [showAllRows, setShowAllRows]   = useState(false);
   const [pinnedGraph, setPinnedGraph] = useState(() => getPinnedCookie());
+
+  // ID/PASS
+  const [authId, setAuthId] = useState('');
+  const [authPass, setAuthPass] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   
   // 削除モーダル用ステート
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -94,6 +99,8 @@ export default function App() {
         start:       '0',
         end:         '0',
         format:      'json',
+        id:          authId,
+        password:    authPass
       });
       const res = await fetch(`${API_BASE}${QUERY_DATA_PATH}?${qs}`);
       const json = await res.json();
@@ -130,7 +137,21 @@ export default function App() {
 
     const startSeq = Math.floor(start.getTime() / 1000 / 180);
     const endSeq   = Math.floor(endTime.getTime()   / 1000 / 180) - 1;
-    const qs = new URLSearchParams({ device_id: device, start: startSeq, end: endSeq, format });
+    const qs = new URLSearchParams({
+      device_id: device,
+      start: startSeq,
+      end: endSeq,
+      format
+    });
+
+    if (isAuthenticated) {
+      qs.set('id', authId);
+      qs.set('password', authPass);
+    } else {
+      alert("ログインしてください");
+      setLoading(false);
+      return;
+    }
     try {
       const url = `${API_BASE}${QUERY_DATA_PATH}?${qs}`;
       if (format === 'csv') window.open(url);
@@ -226,108 +247,153 @@ export default function App() {
       <h1 style={{ display: 'flex', alignItems: 'center', margin: 0 }}>
         <img src={batteryIcon} alt="Battery Icon" style={{ width: 32, height: 32, marginRight: 8 }} />
         Battery Monitor
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {!isAuthenticated ? (
+            <>
+              <input
+                type="text"
+                placeholder="ID"
+                value={authId}
+                onChange={e => setAuthId(e.target.value)}
+                style={{ height: 24, fontSize: 12 }}
+              />
+              <input
+                type="password"
+                placeholder="PASS"
+                value={authPass}
+                onChange={e => setAuthPass(e.target.value)}
+                style={{ height: 24, fontSize: 12 }}
+              />
+              <button
+                onClick={() => {
+                  if (authId && authPass) setIsAuthenticated(true);
+                  else alert("IDとPASSを入力してください");
+                }}
+                style={{ height: 28, fontSize: 12 }}
+              >
+                Login
+              </button>
+            </>
+          ) : (
+            <span style={{ fontSize: 12, color: 'green' }}>
+              🔓 {authId}
+              <button
+                onClick={() => {
+                  setIsAuthenticated(false);
+                  setAuthId('');
+                  setAuthPass('');
+                }}
+                style={{ marginLeft: 8, fontSize: 10 }}
+              >
+                Logout
+              </button>
+            </span>
+          )}
+        </div>
       </h1>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', margin: '20px 0 20px 20px' }}>
-      
-        <DeviceSelector value={device} onChange={setDevice} />
+      {isAuthenticated && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', margin: '20px 0 20px 20px' }}>
+        
+          <DeviceSelector value={device} onChange={setDevice} authId={authId} authPass={authPass} />
 
-        {/* DatePicker コンポーネント側に「disableEnd」を反転して渡す */}
-        <DateRangePicker
-          start={start}
-          end={end}
-          onStartChange={setStart}
-          onEndChange={setEnd}
-          disableEnd={!manualEnd}
-        />
-        {/* チェックONで手動入力ONに（OFFだと自動で now に合わせる） */}
-        <label style={{ marginLeft: 0, marginTop: -2, fontSize: 12 }}>
-          <input
-            type="checkbox"
-            checked={manualEnd}
-            onChange={e => setManualEnd(e.target.checked)}
+          {/* DatePicker コンポーネント側に「disableEnd」を反転して渡す */}
+          <DateRangePicker
+            start={start}
+            end={end}
+            onStartChange={setStart}
+            onEndChange={setEnd}
+            disableEnd={!manualEnd}
           />
-        </label>
-        
-        <button
-          className="toolbar-button"
-          onClick={() => fetchData('json')}
-          disabled={!device||loading}
-          title="検索"
-        >
-          <Search size={20} />
-        </button>
-        <button
-          className="toolbar-button"
-          onClick={() => fetchData('csv')}
-          disabled={!device||loading}
-          title="CSV"
-        >
-          <FileText size={20} />
-        </button>
-        <button
-         className="toolbar-button btn-delete"
-         disabled={!device||loading}
-         onClick={() => setShowDeleteModal(true)}
-         title="削除"
-        >
-          <Trash2 size={20} />
-        </button>
-        <button
-          className="toolbar-button"
-          disabled={!device||loading}
-          onClick={onSettingsClick}
-          title="設定"
-        >
-          <Settings size={20} />
-        </button>
-        
+          {/* チェックONで手動入力ONに（OFFだと自動で now に合わせる） */}
+          <label style={{ marginLeft: 0, marginTop: -2, fontSize: 12 }}>
+            <input
+              type="checkbox"
+              checked={manualEnd}
+              onChange={e => setManualEnd(e.target.checked)}
+            />
+          </label>
+          
+          <button
+            className="toolbar-button"
+            onClick={() => fetchData('json')}
+            disabled={!device||loading}
+            title="検索"
+          >
+            <Search size={20} />
+          </button>
+          <button
+            className="toolbar-button"
+            onClick={() => fetchData('csv')}
+            disabled={!device||loading}
+            title="CSV"
+          >
+            <FileText size={20} />
+          </button>
+          <button
+           className="toolbar-button btn-delete"
+           disabled={!device||loading}
+           onClick={() => setShowDeleteModal(true)}
+           title="削除"
+          >
+            <Trash2 size={20} />
+          </button>
+          <button
+            className="toolbar-button"
+            disabled={!device||loading}
+            onClick={onSettingsClick}
+            title="設定"
+          >
+            <Settings size={20} />
+          </button>
+          
 
-        {/* ─── 追加：ピンアイコンでレイアウト切替 ─── */}
-        <button
-          className="toolbar-button"
-          onClick={() => setPinnedGraph(prev => !prev)}
-          title={
-            pinnedGraph
-              ? 'アンピンして通常レイアウトに戻す'
-              : 'ピンしてテーブルをスクロール'
-          }
-        >
-          {pinnedGraph ? <Pin size={20} /> : <PinOff size={20} />}
-        </button>
-        
-        {showSettings && (
-          <div className="modal-backdrop" onClick={() => setShowSettings(false)}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
-              <span className="modal-close" onClick={() => setShowSettings(false)}>✕</span>
-              <h3>デバイス {device} の sequence=0 情報</h3>
-              {loadingSettings ? (
-                <div className="loading-overlay"><Loader size={48} className="spinner" /></div>
-              ) : settingsData ? (
-               <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
-                 {/* ① db_update_time を JST に変換して表示 */}
-                 {settingsData.db_update_time !== undefined && (
-                   <p>
-                     更新時刻 (JST):{' '}
-                     {new Date(settingsData.db_update_time * 1000)
-                       .toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
-                   </p>
-                 )}
-                 {/* ② その他のフィールドも見やすく */}
-                 {Object.entries(settingsData).map(([key, val]) => (
-                   <p key={key}>
-                     <strong>{key}:</strong>{' '}
-                     {JSON.stringify(val)}
-                   </p>
-                 ))}
-               </div>
-              ) : (
-                <p>データがありません</p>
-              )}
+          {/* ─── 追加：ピンアイコンでレイアウト切替 ─── */}
+          <button
+            className="toolbar-button"
+            onClick={() => setPinnedGraph(prev => !prev)}
+            title={
+              pinnedGraph
+                ? 'アンピンして通常レイアウトに戻す'
+                : 'ピンしてテーブルをスクロール'
+            }
+          >
+            {pinnedGraph ? <Pin size={20} /> : <PinOff size={20} />}
+          </button>
+          
+          {showSettings && (
+            <div className="modal-backdrop" onClick={() => setShowSettings(false)}>
+              <div className="modal-content" onClick={e => e.stopPropagation()}>
+                <span className="modal-close" onClick={() => setShowSettings(false)}>✕</span>
+                <h3>デバイス {device} の sequence=0 情報</h3>
+                {loadingSettings ? (
+                  <div className="loading-overlay"><Loader size={48} className="spinner" /></div>
+                ) : settingsData ? (
+                 <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                   {/* ① db_update_time を JST に変換して表示 */}
+                   {settingsData.db_update_time !== undefined && (
+                     <p>
+                       更新時刻 (JST):{' '}
+                       {new Date(settingsData.db_update_time * 1000)
+                         .toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
+                     </p>
+                   )}
+                   {/* ② その他のフィールドも見やすく */}
+                   {Object.entries(settingsData).map(([key, val]) => (
+                     <p key={key}>
+                       <strong>{key}:</strong>{' '}
+                       {JSON.stringify(val)}
+                     </p>
+                   ))}
+                 </div>
+                ) : (
+                  <p>データがありません</p>
+                )}
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       {/* 削除確認モーダル */}
       {showDeleteModal && (

@@ -2,34 +2,50 @@
 import React, { useEffect, useState } from 'react';
 import { API_BASE, LIST_DEVICES_PATH } from '../config';
 
-export default function DeviceSelector({ value, onChange }) {
+export default function DeviceSelector({ value, onChange, authId, authPass }) {
   const [devices, setDevices] = useState([]);
 
   useEffect(() => {
-    fetch(`${API_BASE}${LIST_DEVICES_PATH}`, { mode: 'cors' })
-      .then(r => r.json())
-      .then(setDevices)
-      .catch(console.error);
-  }, []);
+    if (!authId || !authPass) return;
+
+    const fetchDevices = async () => {
+      try {
+        const qs = new URLSearchParams({
+          id: authId,
+          password: authPass,
+        });
+        const res = await fetch(`${API_BASE}${LIST_DEVICES_PATH}?${qs}`, { mode: 'cors' });
+        const json = await res.json();
+        const items = Array.isArray(json) ? json : json.Items || [];
+        setDevices(items);
+      } catch (e) {
+        console.error('[DeviceSelector] デバイス一覧の取得に失敗:', e);
+        setDevices([]);
+      }
+    };
+
+    fetchDevices();
+  }, [authId, authPass]);
 
   return (
-    <select value={value} onChange={e => onChange(e.target.value)}
-    
+    <select
+      value={value}
+      onChange={e => onChange(e.target.value)}
       style={{
-        // テキストを数ピクセル下にずらす
         paddingTop: '2px',
         paddingLeft: '8px',
         paddingBottom: '2px',
-        // ボックスの高さを固定するなら
         height: '26px',
-        // 必要なら行の高さも指定
         lineHeight: '1.2',
         boxSizing: 'border-box',
       }}
-          
     >
       <option value="">デバイスを選択</option>
-      {devices.map(d => <option key={d} value={d}>{d}</option>)}
+      {devices.map(d => (
+        <option key={d.device_id || d} value={d.device_id || d}>
+          {d.device_id || d}
+        </option>
+      ))}
     </select>
   );
 }
