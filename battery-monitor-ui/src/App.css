@@ -1,3 +1,9 @@
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
 .App {
   text-align: center;
 }
@@ -228,14 +234,21 @@
 
 /* 分離レイアウト：グリッドで上下２エリアに */
 .layout--separate {
-  display: grid;
-  grid-template-rows: auto 1fr;   /* 上：グラフの高さ、下：テーブル部が残り */
-  height: calc(100vh - 160px);    /* ページ全高 ? ヘッダー／ツールバー分（要調整） */
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 60px); /* ← 必要に応じて調整 */
+  overflow: hidden;
 }
 
-/* テーブル部だけスクロール */
+.layout--separate .graph {
+  flex: 0 0 auto;
+}
+
 .layout--separate .table {
+  flex: 1 1 auto;
   overflow-y: auto;
+  min-height: 0;   /* ← これが超重要 */
+  padding-bottom: 0;  /* 念のため余白なし */
 }
 
 /* テーブルヘッダーを固定 */
