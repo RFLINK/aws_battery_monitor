@@ -125,7 +125,7 @@ def lambda_handler(event, context):
 
             response = sns.publish(
                 TopicArn='arn:aws:sns:ap-northeast-1:354918407007:invalid_voltage_values',
-                Subject='電圧異常通知',
+                Subject=f'電圧異常通知 id: {device_id} 時刻: {jst_str}',
                 Message=message
             )        
             logger.info(f"SNS MessageId: {response.get('MessageId')}")

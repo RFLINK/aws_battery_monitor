@@ -185,6 +185,60 @@ export default function App() {
     }
   };
 
+  const onLogin = async () => {
+    if (!authId || !authPass) {
+      alert('IDとパスワードを入力してください');
+      return;
+    }
+
+    try {
+      const res = await fetch(`https://ko81621j3g.execute-api.ap-northeast-1.amazonaws.com/Login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: authId, password: authPass }),
+        credentials: 'include' // ← Set-Cookie を受け取るのに必要
+      });
+
+      if (!res.ok) {
+        alert('ログイン失敗');
+        return;
+      }
+      
+      // Cookie への保存を追加
+      setAuthCookie('authId', authId);
+      setAuthCookie('authPass', authPass);
+
+      const result = await res.json();
+      console.log('ログイン成功:', result);
+      setIsAuthenticated(true);
+
+      setShowTable(true);
+          
+    } catch (err) {
+      console.error('ログインエラー', err);
+      alert('ログイン処理中にエラーが発生しました');
+    }
+  };
+
+  const onLogout = () => {
+    // Cookie 削除
+    deleteAuthCookie('authId');
+    deleteAuthCookie('authPass');
+    deleteAuthCookie('auth_token');
+
+    // ログイン状態 false に
+    setIsAuthenticated(false);
+    setAuthId('');
+    setAuthPass('');
+
+    // 表示データを初期化
+    setDevice('');
+    setData([]);
+    setShowAllRows(false);
+    setShowTable(false);
+    setSettingsData(null);
+  };
+
   // 範囲削除
   const deleteRangeData = async () => {
     setLoading(true);
@@ -282,14 +336,7 @@ export default function App() {
                 style={{ height: 24, fontSize: 12 }}
               />
               <button
-                onClick={() => {
-                  if (authId && authPass) {
-                    setIsAuthenticated(true);
-                    setAuthCookie('authId', authId);
-                    setAuthCookie('authPass', authPass);
-                  }
-                  else alert("IDとPASSを入力してください");
-                }}
+                onClick={onLogin}
                 style={{ height: 28, fontSize: 12 }}
               >
                 Login
@@ -298,16 +345,7 @@ export default function App() {
           ) : (
             <span style={{ fontSize: 12, color: 'green' }}>
               🔓 {authId}
-              <button
-                onClick={() => {
-                  setIsAuthenticated(false);
-                  setAuthId('');
-                  setAuthPass('');
-                  deleteAuthCookie('authId');
-                  deleteAuthCookie('authPass');
-                }}
-                style={{ marginLeft: 8, fontSize: 10 }}
-              >
+              <button onClick={onLogout} style={{ marginLeft: 8, fontSize: 10 }}>
                 Logout
               </button>
             </span>
