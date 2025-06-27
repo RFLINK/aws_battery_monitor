@@ -5,11 +5,15 @@ import boto3
 from boto3.dynamodb.conditions import Key
 import datetime
 import time
+import logging
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 # 環境変数にテーブル名を設定
 TABLE_NAME = os.environ.get('TABLE_NAME', 'MessageBuffer')
 IOT_REGION = 'ap-northeast-1'
 iot = boto3.client('iot-data', region_name=IOT_REGION)
+sns = boto3.client('sns')
 
 # DynamoDB リソース初期化
 dynamodb = boto3.resource('dynamodb')
@@ -95,9 +99,39 @@ def lambda_handler(event, context):
 
     # ───────────────────────────────────────
     # 4.5) 電圧値サニタイズ：Web/CSV 出力用にのみ適用
-    clean, corrections = _sanitize_voltages(clean)
+    corrections = 0
+    clean, corrections, seq_abnormal, abnormal_values = _sanitize_voltages(clean)
     if corrections > 0:
-        print(f"[PREP] Voltages sanitized: {corrections} values >=100V replaced")
+        try:
+            print(f"[PREP] Voltages sanitized: {corrections} values > 110V replaced")
+
+            jst = datetime.timezone(datetime.timedelta(hours=9))
+            jst_str = "(不明)"
+            if seq_abnormal is not None:
+                jst_dt = datetime.datetime.fromtimestamp(seq_abnormal * 180, tz=jst)
+                jst_str = jst_dt.strftime('%Y/%m/%d %H:%M:%S')
+            abnormal_str = ', '.join(f"{v:.2f}" for v in abnormal_values[:10])
+            if len(abnormal_values) > 10:
+                abnormal_str += f"（他 {len(abnormal_values) - 10} 件）"
+
+            message = (
+                f"電圧異常値を検出しました。\n\n"
+                f"デバイスID: {device_id}\n"
+                f"異常検出シーケンス: {seq_abnormal}\n"
+                f"JST時刻: {jst_str}\n"
+                f"異常補正数: {corrections} 件\n"
+                f"異常電圧値（最大10件表示）: {abnormal_str}"
+            )
+
+            response = sns.publish(
+                TopicArn='arn:aws:sns:ap-northeast-1:354918407007:invalid_voltage_values',
+                Subject='電圧異常通知',
+                Message=message
+            )        
+            logger.info(f"SNS MessageId: {response.get('MessageId')}")
+            
+        except Exception as e:
+            logger.error("SNS publish failed", exc_info=True)
     # ───────────────────────────────────────
 
     # 5) レスポンス: JSON or CSV
@@ -209,16 +243,23 @@ def _resp(code, body):
 # 追加：サニタイズ関数
 def _sanitize_voltages(items):
     total_corrections = 0
+    latest_abnormal_seq = None
+    abnormal_values = []
+
     for item in items:
         vs = item.get('voltages', [])
-        # 先に最初の正常値を探す（なければ0をデフォルトに）
-        first_valid = next((x for x in vs if isinstance(x, (int, float)) and x < 110), 0)
+        seq = item.get('sequence_number', 0)
+
+        first_valid = next((x for x in vs if isinstance(x, (int, float)) and x <= 110), 0)
         prev = first_valid
 
         for i, v in enumerate(vs):
-            if isinstance(v, (int, float)) and v >= 100:
+            if isinstance(v, (int, float)) and v > 110:
+                abnormal_values.append(v)
                 vs[i] = prev
                 total_corrections += 1
+                latest_abnormal_seq = seq
             else:
                 prev = v
-    return items, total_corrections
+
+    return items, total_corrections, latest_abnormal_seq, abnormal_values

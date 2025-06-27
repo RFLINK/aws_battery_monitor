@@ -26,6 +26,19 @@ const setPinnedCookie = (val) => {
   document.cookie = `pinnedGraph=${val}; path=/; max-age=${60*60*24*365}`;
 };
 
+const getAuthCookie = (key) => {
+  const m = document.cookie.match(`(?:^|;\\s*)${key}=([^;]*)`);
+  return m ? decodeURIComponent(m[1]) : '';
+};
+
+const setAuthCookie = (key, val, days = 365) => {
+  const expires = new Date(Date.now() + days * 86400 * 1000).toUTCString();
+  document.cookie = `${key}=${encodeURIComponent(val)}; path=/; expires=${expires}`;
+};
+
+const deleteAuthCookie = (key) => {
+  document.cookie = `${key}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+};
 
 export default function App() {
   const [device, setDevice] = useState('');
@@ -39,9 +52,11 @@ export default function App() {
   const [pinnedGraph, setPinnedGraph] = useState(() => getPinnedCookie());
 
   // ID/PASS
-  const [authId, setAuthId] = useState('');
-  const [authPass, setAuthPass] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authId, setAuthId] = useState(() => getAuthCookie('authId'));
+  const [authPass, setAuthPass] = useState(() => getAuthCookie('authPass'));
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return !!(getAuthCookie('authId') && getAuthCookie('authPass'));
+  });
   
   // 削除モーダル用ステート
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -266,7 +281,11 @@ export default function App() {
               />
               <button
                 onClick={() => {
-                  if (authId && authPass) setIsAuthenticated(true);
+                  if (authId && authPass) {
+                    setIsAuthenticated(true);
+                    setAuthCookie('authId', authId);
+                    setAuthCookie('authPass', authPass);
+                  }
                   else alert("IDとPASSを入力してください");
                 }}
                 style={{ height: 28, fontSize: 12 }}
@@ -282,6 +301,8 @@ export default function App() {
                   setIsAuthenticated(false);
                   setAuthId('');
                   setAuthPass('');
+                  deleteAuthCookie('authId');
+                  deleteAuthCookie('authPass');
                 }}
                 style={{ marginLeft: 8, fontSize: 10 }}
               >
