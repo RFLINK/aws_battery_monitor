@@ -71,9 +71,11 @@ export default function App() {
   // デバイス選択時に自動検索
   useEffect(() => {
     if (!device) return;
-    const now = new Date();
-    setEnd(now);
-    setStart(new Date(now.getTime() - 3600 * 24 * 3 * 1000));
+    if (!manualEnd) {
+      const now = new Date();
+      setEnd(now);  // 自動で現在時刻に更新
+      // start はそのまま維持
+    }
     fetchData('json');
   }, [device]);
 
