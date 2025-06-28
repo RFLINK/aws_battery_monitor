@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, FileText, Trash2, Settings, Loader, Pin, PinOff } from 'lucide-react';
+import { Search, FileText, Trash2, Settings, Loader, Pin, PinOff, LogIn, LogOut } from 'lucide-react';
 import DeviceSelector from './components/DeviceSelector';
 import DateRangePicker from './components/DateRangePicker';
 import './App.css';
@@ -212,6 +212,12 @@ export default function App() {
       console.log('ログイン成功:', result);
       setIsAuthenticated(true);
 
+      setManualEnd(false);  // ← 自動モードにしておく
+      const now = new Date();
+      const threeHoursAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+      setStart(threeHoursAgo);
+      setEnd(now);
+
       setShowTable(true);
           
     } catch (err) {
@@ -326,27 +332,63 @@ export default function App() {
                 placeholder="ID"
                 value={authId}
                 onChange={e => setAuthId(e.target.value)}
-                style={{ height: 24, fontSize: 12 }}
+                style={{ height: 14, fontSize: 12 }}
               />
               <input
                 type="password"
                 placeholder="PASS"
                 value={authPass}
                 onChange={e => setAuthPass(e.target.value)}
-                style={{ height: 24, fontSize: 12 }}
+                style={{ height: 14, fontSize: 12 }}
               />
               <button
                 onClick={onLogin}
-                style={{ height: 28, fontSize: 12 }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  height: 24,
+                  fontSize: 12,
+                  padding: '0 12px',
+                  fontFamily: 'Meiryo',
+                  border: '1px solid #4caf50',
+                  borderRadius: '4px',
+                  backgroundColor: '#e8f5e9',
+                  cursor: 'pointer',
+                  color: '#2e7d32'
+                }}
               >
-                Login
+                <LogIn size={12} />
               </button>
             </>
           ) : (
-            <span style={{ fontSize: 12, color: 'green' }}>
+            <span style={{
+              fontSize: 12,
+              color: 'green',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontFamily: 'Meiryo'
+            }}>
               🔓 {authId}
-              <button onClick={onLogout} style={{ marginLeft: 8, fontSize: 10 }}>
-                Logout
+              <button
+                onClick={onLogout}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  height: 24,
+                  fontSize: 12,
+                  padding: '0 12px',
+                  fontFamily: 'Meiryo',
+                  border: '1px solid #4caf50',
+                  borderRadius: '4px',
+                  backgroundColor: '#e8f5e9',
+                  cursor: 'pointer',
+                  color: '#c62828',
+                }}
+              >
+                <LogOut size={12} />
               </button>
             </span>
           )}
