@@ -101,7 +101,9 @@ def lambda_handler(event, context):
     # 4.5) 電圧値サニタイズ：Web/CSV 出力用にのみ適用
     corrections = 0
     clean, corrections, seq_abnormal, abnormal_values = _sanitize_voltages(clean)
-    if corrections > 0:
+
+    # GWからのERRORチェックを入れたので、参照でERROR発見通知は一旦無効とする。(and Falseにより無効化している)
+    if corrections > 0 and False:
         try:
             print(f"[PREP] Voltages sanitized: {corrections} values > 110V replaced")
 

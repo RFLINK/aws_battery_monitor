@@ -13,6 +13,7 @@ REQUIRED_KEYS = ("destination", "gateway_id", "device_id", "sequence_number", "t
 iot = boto3.client('iot-data', region_name=IOT_REGION)
 ddb = boto3.resource('dynamodb', region_name=IOT_REGION)
 table = ddb.Table(TABLE_NAME)
+sns = boto3.client('sns')
 
 def lambda_handler(event, context):
     print("Received event:", event)
@@ -28,6 +29,9 @@ def lambda_handler(event, context):
     device_id       = event['device_id']
     msg_ts          = int(event['timestamp'])
     rssi            = int(event.get('rssi')) if 'rssi' in event else None
+    error_code      = int(event.get('ERROR', 0))
+    if error_code != 0:
+        notify_error(device_id, gateway_id, error_code)
 
     # Numeric fields conversion
     voltages = [Decimal(str(v)) for v in event.get('voltages', [])]
@@ -125,3 +129,16 @@ def _send_ack(gateway_id, device_id, seq):
         print(f"[ACK] Published: {payload}")
     except ClientError as exc:
         print(f"[ERROR] publish ACK failed: {exc.response['Error']['Message']}")
+
+def notify_error(device_id, gateway_id, error_code):
+    message = f"[BatteryMonitor] ERROR detected!\nDevice: {device_id}\nGateway: {gateway_id}\nError Code: {error_code}"
+    subject = f"[Alert] ERROR from {device_id} via {gateway_id}"
+    try:
+        sns.publish(
+            TopicArn='arn:aws:sns:ap-northeast-1:354918407007:invalid_voltage_values',
+            Subject=subject,
+            Message=message
+        )
+        print("[Notify] SNS alert sent.")
+    except ClientError as e:
+        print(f"[ERROR] SNS publish failed: {e.response['Error']['Message']}")
