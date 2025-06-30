@@ -14,7 +14,6 @@ iot = boto3.client('iot-data', region_name=IOT_REGION)
 ddb = boto3.resource('dynamodb', region_name=IOT_REGION)
 table = ddb.Table(TABLE_NAME)
 
-
 def lambda_handler(event, context):
     print("Received event:", event)
 
@@ -25,7 +24,7 @@ def lambda_handler(event, context):
 
     # 2) Extract and convert parameters
     gateway_id      = event['gateway_id']
-    seq = int(event['sequence_number'])
+    seq             = int(event['sequence_number'])
     device_id       = event['device_id']
     msg_ts          = int(event['timestamp'])
     rssi            = int(event.get('rssi')) if 'rssi' in event else None
@@ -33,7 +32,6 @@ def lambda_handler(event, context):
     # Numeric fields conversion
     voltages = [Decimal(str(v)) for v in event.get('voltages', [])]
     temperature = Decimal(str(event['temperature'])) if 'temperature' in event else None
-    humidity    = Decimal(str(event['humidity']))    if 'humidity' in event else None
 
     now       = int(time.time())
     threshold = now - 3
@@ -57,7 +55,6 @@ def lambda_handler(event, context):
                 'rssi'            : rssi,
                 'voltages'        : voltages,
                 'temperature'     : temperature,
-                'humidity'        : humidity,
                 'db_update_time'  : now
             },
             ConditionExpression="attribute_not_exists(device_id) AND attribute_not_exists(sequence_number)"
@@ -81,7 +78,6 @@ def lambda_handler(event, context):
                     rssi            = :rssi,
                     voltages        = :voltages,
                     temperature     = :temperature,
-                    humidity        = :humidity,
                     #ts             = :msg_ts,
                     db_update_time  = :now
             """,
@@ -91,7 +87,6 @@ def lambda_handler(event, context):
                 ':rssi'      : rssi,
                 ':voltages'  : voltages,
                 ':temperature': temperature,
-                ':humidity'  : humidity,
                 ':msg_ts'    : msg_ts,
                 ':now'       : now,
                 ':threshold' : threshold
@@ -99,6 +94,7 @@ def lambda_handler(event, context):
             ConditionExpression="db_update_time < :threshold",
             ReturnValues="ALL_NEW"
         )
+           
         _send_ack(gateway_id, device_id, seq)
         print(f"[Timeout Update] Overwrite {device_id}_{seq} after timeout")
         print("[New Item]", resp.get('Attributes'))
