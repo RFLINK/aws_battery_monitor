@@ -3,6 +3,8 @@ import boto3
 import time
 from botocore.exceptions import ClientError
 from decimal import Decimal
+import os
+import urllib3
 
 # --- Environment Variables / Constants ---
 IOT_REGION = 'ap-northeast-1'
@@ -14,6 +16,9 @@ iot = boto3.client('iot-data', region_name=IOT_REGION)
 ddb = boto3.resource('dynamodb', region_name=IOT_REGION)
 table = ddb.Table(TABLE_NAME)
 sns = boto3.client('sns')
+
+http = urllib3.PoolManager()
+SLACK_WORKFLOW_WEBHOOK_URL = os.environ.get("SLACK_WORKFLOW_WEBHOOK_URL")
 
 def lambda_handler(event, context):
     print("Received event:", event)
@@ -29,9 +34,22 @@ def lambda_handler(event, context):
     device_id       = event['device_id']
     msg_ts          = int(event['timestamp'])
     rssi            = int(event.get('rssi')) if 'rssi' in event else None
-    error_code      = int(event.get('ERROR', 0))
-    if error_code != 0:
-        notify_error(device_id, gateway_id, error_code)
+    error_raw       = event.get("ERROR", 0)
+
+    # 共通処理：文字列でも数値でも判定できるようにする
+    if isinstance(error_raw, (int, float)):
+        error_code = int(error_raw)
+        if error_code != 0:
+            notify_error(device_id, gateway_id, str(error_code))
+
+    elif isinstance(error_raw, str):
+        error_str = error_raw.strip()
+        if error_str and error_str != "0":
+            notify_error(device_id, gateway_id, error_str)
+
+    else:
+        # その他の形式（None, dict など）→ 無視またはログ出力
+        print(f"[WARN] Unrecognized ERROR format: {error_raw}")
 
     # Numeric fields conversion
     voltages = [Decimal(str(v)) for v in event.get('voltages', [])]
@@ -131,7 +149,10 @@ def _send_ack(gateway_id, device_id, seq):
         print(f"[ERROR] publish ACK failed: {exc.response['Error']['Message']}")
 
 def notify_error(device_id, gateway_id, error_code):
-    message = f"[BatteryMonitor] ERROR detected!\nDevice: {device_id}\nGateway: {gateway_id}\nError Code: {error_code}"
+    error_text = str(error_code) 
+
+    # SNS 通知
+    message = f"[BatteryMonitor] ERROR detected!\nDevice: {device_id}\nGateway: {gateway_id}\nError Code: {error_text}"
     subject = f"[Alert] ERROR from {device_id} via {gateway_id}"
     try:
         sns.publish(
@@ -142,3 +163,24 @@ def notify_error(device_id, gateway_id, error_code):
         print("[Notify] SNS alert sent.")
     except ClientError as e:
         print(f"[ERROR] SNS publish failed: {e.response['Error']['Message']}")
+
+    # Slack Webhook 通知
+    if not SLACK_WORKFLOW_WEBHOOK_URL:
+        print("[Slack] Webhook URL not configured.")
+        return
+
+    payload = {
+        "device_id": str(device_id),
+        "error_num": str(error_text)
+    }
+
+    try:
+        response = http.request(
+            "POST",
+            SLACK_WORKFLOW_WEBHOOK_URL,
+            body=json.dumps(payload),
+            headers={"Content-Type": "application/json"}
+        )
+        print(f"[Slack Workflow] Sent, status = {response.status}")
+    except Exception as e:
+        print(f"[Slack Workflow] Error: {str(e)}")
